@@ -64,6 +64,44 @@ def smallest_distance_between_lists(text, list1, list2):
 list1 = ['occ', 'cfpb', 'fdic']
 list2 = ['consent', 'mra']
 
+
+
+import re
+
+def find_phrase_positions(text, phrases):
+    """Returns a dictionary with phrases as keys and their positions in the text as values."""
+    positions = {}
+    for phrase in phrases:
+        # Use regular expression to find all positions of the phrase in the text
+        positions[phrase] = [m.start() for m in re.finditer(re.escape(phrase), text)]
+    return positions
+
+def smallest_distance_between_lists(text, list1, list2):
+    # Find positions of all phrases in list1 and list2
+    positions_list1 = find_phrase_positions(text, list1)
+    positions_list2 = find_phrase_positions(text, list2)
+    
+    min_distance = float('inf')
+    
+    # Iterate over all positions of phrases in list1 and list2
+    for phrase1, pos_list1 in positions_list1.items():
+        for phrase2, pos_list2 in positions_list2.items():
+            for pos1 in pos_list1:
+                for pos2 in pos_list2:
+                    distance = abs(pos1 - pos2)
+                    min_distance = min(min_distance, distance)
+    
+    # If min_distance was updated, return it; otherwise, return -1 indicating no valid distance found
+    return min_distance if min_distance != float('inf') else -1
+
+# Example usage
+list1 = ['occ', 'cfpb', 'fdic', 'consent order']
+list2 = ['mra', 'consent order']
+
+text = "The OCC issued a consent order yesterday. The CFPB is working on a new MRA. FDIC had issued a consent order last year."
+
+result = smallest_distance_between_lists(text, list1, list2)
+print(result)  # This will print: 0, since 'consent order' from list1 and list2 overlap (distance is 0)
 text = "The OCC issued a consent order yesterday. The CFPB is working on a new MRA."
 
 result = smallest_distance_between_lists(text, list1, list2)
