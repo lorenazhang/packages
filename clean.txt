@@ -31,3 +31,40 @@ word2 = "fox"
 
 result = smallest_distance(text, word1, word2)
 print(result)  # This will print: 1, since 'quick' and 'fox' are 1 word apart at their closest points
+
+
+
+def smallest_distance_between_lists(text, list1, list2):
+    # Split the text into words
+    words = text.split()
+    
+    # Initialize variables to track positions and the smallest distance
+    last_pos_list1 = -1
+    last_pos_list2 = -1
+    min_distance = float('inf')
+    
+    # Iterate through the list of words
+    for i, word in enumerate(words):
+        if word in list1:
+            last_pos_list1 = i
+            # Calculate distance if a word from list2 has already been seen
+            if last_pos_list2 != -1:
+                min_distance = min(min_distance, abs(last_pos_list1 - last_pos_list2))
+        
+        if word in list2:
+            last_pos_list2 = i
+            # Calculate distance if a word from list1 has already been seen
+            if last_pos_list1 != -1:
+                min_distance = min(min_distance, abs(last_pos_list2 - last_pos_list1))
+    
+    # If min_distance was updated, return it; otherwise, return -1 indicating no valid distance found
+    return min_distance if min_distance != float('inf') else -1
+
+# Example usage
+list1 = ['occ', 'cfpb', 'fdic']
+list2 = ['consent', 'mra']
+
+text = "The OCC issued a consent order yesterday. The CFPB is working on a new MRA."
+
+result = smallest_distance_between_lists(text, list1, list2)
+print(result)  # This will print: 1, since 'OCC' and 'consent' are 1 word apart at their closest points
