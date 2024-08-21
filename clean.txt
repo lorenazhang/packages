@@ -24,13 +24,7 @@ def smallest_distance(text, word1, word2):
     # If min_distance was updated, return it; otherwise, return -1 indicating words were not found
     return min_distance if min_distance != float('inf') else -1
 
-# Example usage
-text = "The quick brown fox jumps over the lazy dog. The quick brown fox is very quick."
-word1 = "quick"
-word2 = "fox"
 
-result = smallest_distance(text, word1, word2)
-print(result)  # This will print: 1, since 'quick' and 'fox' are 1 word apart at their closest points
 
 
 
@@ -60,9 +54,7 @@ def smallest_distance_between_lists(text, list1, list2):
     # If min_distance was updated, return it; otherwise, return -1 indicating no valid distance found
     return min_distance if min_distance != float('inf') else -1
 
-# Example usage
-list1 = ['occ', 'cfpb', 'fdic']
-list2 = ['consent', 'mra']
+
 
 
 
