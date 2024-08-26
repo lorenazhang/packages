@@ -1,8 +1,8 @@
 
 def contains_gov_or_org_email(text):
     # Regular expression pattern to match emails ending with .gov or .org
-    pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(gov|org)\b'
     pattern = r'[a-zA-Z0-9._%+-]+@(occ|fdic)\.(gov|org)\b'
+    pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]*\.(occ|fdic)\.(gov|org)\b'
 
     
     # Search for the pattern in the text
