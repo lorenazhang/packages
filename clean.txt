@@ -1,39 +1,16 @@
 
-import nltk
-nltk.download('wordnet')
-nltk.download('omw-1.4')
-nltk.download('punkt')  # For tokenization
-nltk.download('averaged_perceptron_tagger')  # For part-of-speech tagging
 
-import nltk
-from nltk.stem import WordNetLemmatizer
-from nltk.corpus import wordnet
+# Determine the number of files needed
+num_files = len(df) // 100 + (1 if len(df) % 100 != 0 else 0)
 
-# Initialize the WordNet lemmatizer
-lemmatizer = WordNetLemmatizer()
+# Save each chunk to a separate Excel file
+for i in range(num_files):
+    start_row = i * 100
+    end_row = (i + 1) * 100
+    chunk_df = df.iloc[start_row:end_row]
+    
+    # Save to Excel with extension _1, _2, ...
+    filename = f"output_{i+1}.xlsx"
+    chunk_df.to_excel(filename, index=False)
 
-# Function to map NLTK POS tags to WordNet POS tags
-def get_wordnet_pos(word):
-    tag = nltk.pos_tag([word])[0][1][0].upper()
-    tag_dict = {
-        'J': wordnet.ADJ,
-        'N': wordnet.NOUN,
-        'V': wordnet.VERB,
-        'R': wordnet.ADV
-    }
-    return tag_dict.get(tag, wordnet.NOUN)
-
-# Sample text
-text = "The striped bats are hanging on their feet for best"
-
-# Tokenize the text into words
-words = nltk.word_tokenize(text)
-
-# Lemmatize each word with its POS tag
-lemmatized_words = [lemmatizer.lemmatize(word, get_wordnet_pos(word)) for word in words]
-
-# Join the lemmatized words back into a single string
-lemmatized_text = ' '.join(lemmatized_words)
-
-print("Original text:", text)
-print("Lemmatized text:", lemmatized_text)
+print(f"Saved {num_files} Excel files.")
