@@ -1,16 +1,1 @@
 
-
-# Determine the number of files needed
-num_files = len(df) // 100 + (1 if len(df) % 100 != 0 else 0)
-
-# Save each chunk to a separate Excel file
-for i in range(num_files):
-    start_row = i * 100
-    end_row = (i + 1) * 100
-    chunk_df = df.iloc[start_row:end_row]
-    
-    # Save to Excel with extension _1, _2, ...
-    filename = f"output_{i+1}.xlsx"
-    chunk_df.to_excel(filename, index=False)
-
-print(f"Saved {num_files} Excel files.")
