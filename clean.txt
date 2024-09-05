@@ -10,6 +10,28 @@ from nltk import pos_tag, word_tokenize
 spark = SparkSession.builder \
     .appName("Lemmatization") \
     .getOrCreate()
+#read excel into df
+from pyspark.sql import SparkSession
+
+# Initialize Spark session with the spark-excel package
+spark = SparkSession.builder \
+    .appName("ReadExcel") \
+    .config("spark.jars.packages", "com.crealytics:spark-excel_2.12:0.13.7") \
+    .getOrCreate()
+
+# Path to your Excel file
+excel_path = "/path/to/your/file.xlsx"
+
+# Read the Excel file into a DataFrame
+df = spark.read.format("com.crealytics.spark.excel") \
+    .option("header", "true") \  # Whether to consider the first row as headers
+    .option("inferSchema", "true") \  # Infer the schema automatically
+    .option("dataAddress", "'Sheet1'!A1") \  # Specify the sheet and cell range to read from
+    .load(excel_path)
+
+# Show the DataFrame
+df.show(truncate=False)
+
 
 # Sample DataFrame
 data = [("The cats are running quickly.",), ("The dogs barked loudly.",)]
