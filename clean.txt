@@ -1,1 +1,52 @@
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import udf
+from pyspark.sql.types import ArrayType, StringType
+import nltk
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import wordnet
+from nltk import pos_tag, word_tokenize
 
+# Initialize Spark session
+spark = SparkSession.builder \
+    .appName("Lemmatization") \
+    .getOrCreate()
+
+# Sample DataFrame
+data = [("The cats are running quickly.",), ("The dogs barked loudly.",)]
+columns = ["text"]
+df = spark.createDataFrame(data, columns)
+
+# Initialize WordNetLemmatizer
+lemmatizer = WordNetLemmatizer()
+
+# Function to convert POS tags to WordNet format
+def get_wordnet_pos(tag):
+    if tag.startswith('J'):
+        return wordnet.ADJ
+    elif tag.startswith('V'):
+        return wordnet.VERB
+    elif tag.startswith('N'):
+        return wordnet.NOUN
+    elif tag.startswith('R'):
+        return wordnet.ADV
+    else:
+        return wordnet.NOUN
+
+# Define the lemmatization function
+def lemmatize_text(text):
+    tokens = word_tokenize(text)
+    pos_tags = pos_tag(tokens)
+    lemmatized = [lemmatizer.lemmatize(token, get_wordnet_pos(tag)) for token, tag in pos_tags]
+    return lemmatized
+
+# Register the lemmatization function as a UDF
+lemmatize_udf = udf(lemmatize_text, ArrayType(StringType()))
+
+# Apply the UDF to the DataFrame
+lemmatized_df = df.withColumn("lemmatized_text", lemmatize_udf(df["text"]))
+
+# Show the results
+lemmatized_df.show(truncate=False)
+
+# Stop the Spark session
+spark.stop()
