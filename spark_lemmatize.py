@@ -4,12 +4,16 @@ from pyspark.sql.types import ArrayType, StringType
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 
-# Initialize PySpark session
+# Initialize PySpark session with configurations to utilize 10 CPUs
 spark = SparkSession.builder \
     .appName("TokenizationLemmatization") \
+    .config("spark.executor.cores", "10") \
+    .config("spark.driver.cores", "10") \
+    .config("spark.sql.shuffle.partitions", "20") \  # Adjust based on workload, usually 2x CPUs
+    .config("spark.default.parallelism", "20") \     # Same here, tune based on tests
     .getOrCreate()
 
-# Sample data - replace this with reading your dataset
+# Sample data - replace with your dataset loading method
 data = [(1, "The quick brown fox jumps over the lazy dog."),
         (2, "Natural Language Processing is fun!"),
         (3, "PySpark makes processing large datasets easy.")]
