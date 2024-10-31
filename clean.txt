@@ -1,23 +1,31 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM
+import transformers
 import torch
 
-# Load tokenizer and model
-model_name = "meta-llama/Llama-3-70b-instruct"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", torch_dtype=torch.float16)
+model_id = "meta-llama/Meta-Llama-3-70B-Instruct"
 
-# Define a function to generate answers
-def generate_answer(question):
-    # Encode the question
-    inputs = tokenizer("Q: " + question + "\nA:", return_tensors="pt").to("cuda")
-    # Generate the answer
-    output = model.generate(**inputs, max_length=200, temperature=0.7, top_k=50)
-    # Decode the generated answer
-    answer = tokenizer.decode(output[0], skip_special_tokens=True)
-    # Return the answer, cleaned up if necessary
-    return answer.split("A:")[-1].strip()
+pipeline = transformers.pipeline(
+    "text-generation",
+    model=model_id,
+    model_kwargs={"torch_dtype": torch.bfloat16},
+    device_map="auto",
+)
 
-# Sample usage
-question = "What are the main benefits of using large language models in AI development?"
-answer = generate_answer(question)
-print("Answer:", answer)
+messages = [
+    {"role": "system", "content": "You are a pirate chatbot who always responds in pirate speak!"},
+    {"role": "user", "content": "Who are you?"},
+]
+
+terminators = [
+    pipeline.tokenizer.eos_token_id,
+    pipeline.tokenizer.convert_tokens_to_ids("<|eot_id|>")
+]
+
+outputs = pipeline(
+    messages,
+    max_new_tokens=256,
+    eos_token_id=terminators,
+    do_sample=True,
+    temperature=0.6,
+    top_p=0.9,
+)
+print(outputs[0]["generated_text"][-1])
