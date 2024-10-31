@@ -1,74 +1,23 @@
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import udf
-from pyspark.sql.types import ArrayType, StringType
-import nltk
-from nltk.stem import WordNetLemmatizer
-from nltk.corpus import wordnet
-from nltk import pos_tag, word_tokenize
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import torch
 
-# Initialize Spark session
-spark = SparkSession.builder \
-    .appName("Lemmatization") \
-    .getOrCreate()
-#read excel into df
-from pyspark.sql import SparkSession
+# Load tokenizer and model
+model_name = "meta-llama/Llama-3-70b-instruct"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", torch_dtype=torch.float16)
 
-# Initialize Spark session with the spark-excel package
-spark = SparkSession.builder \
-    .appName("ReadExcel") \
-    .config("spark.jars.packages", "com.crealytics:spark-excel_2.12:0.13.7") \
-    .getOrCreate()
+# Define a function to generate answers
+def generate_answer(question):
+    # Encode the question
+    inputs = tokenizer("Q: " + question + "\nA:", return_tensors="pt").to("cuda")
+    # Generate the answer
+    output = model.generate(**inputs, max_length=200, temperature=0.7, top_k=50)
+    # Decode the generated answer
+    answer = tokenizer.decode(output[0], skip_special_tokens=True)
+    # Return the answer, cleaned up if necessary
+    return answer.split("A:")[-1].strip()
 
-# Path to your Excel file
-excel_path = "/path/to/your/file.xlsx"
-
-# Read the Excel file into a DataFrame
-df = spark.read.format("com.crealytics.spark.excel") \
-    .option("header", "true") \  # Whether to consider the first row as headers
-    .option("inferSchema", "true") \  # Infer the schema automatically
-    .option("dataAddress", "'Sheet1'!A1") \  # Specify the sheet and cell range to read from
-    .load(excel_path)
-
-# Show the DataFrame
-df.show(truncate=False)
-
-
-# Sample DataFrame
-data = [("The cats are running quickly.",), ("The dogs barked loudly.",)]
-columns = ["text"]
-df = spark.createDataFrame(data, columns)
-
-# Initialize WordNetLemmatizer
-lemmatizer = WordNetLemmatizer()
-
-# Function to convert POS tags to WordNet format
-def get_wordnet_pos(tag):
-    if tag.startswith('J'):
-        return wordnet.ADJ
-    elif tag.startswith('V'):
-        return wordnet.VERB
-    elif tag.startswith('N'):
-        return wordnet.NOUN
-    elif tag.startswith('R'):
-        return wordnet.ADV
-    else:
-        return wordnet.NOUN
-
-# Define the lemmatization function
-def lemmatize_text(text):
-    tokens = word_tokenize(text)
-    pos_tags = pos_tag(tokens)
-    lemmatized = [lemmatizer.lemmatize(token, get_wordnet_pos(tag)) for token, tag in pos_tags]
-    return lemmatized
-
-# Register the lemmatization function as a UDF
-lemmatize_udf = udf(lemmatize_text, ArrayType(StringType()))
-
-# Apply the UDF to the DataFrame
-lemmatized_df = df.withColumn("lemmatized_text", lemmatize_udf(df["text"]))
-
-# Show the results
-lemmatized_df.show(truncate=False)
-
-# Stop the Spark session
-spark.stop()
+# Sample usage
+question = "What are the main benefits of using large language models in AI development?"
+answer = generate_answer(question)
+print("Answer:", answer)
