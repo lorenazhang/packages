@@ -1,31 +1,44 @@
-import transformers
-import torch
+import pandas as pd
+import nltk
+from gensim import corpora, models
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
 
-model_id = "meta-llama/Meta-Llama-3-70B-Instruct"
+# Download NLTK data
+nltk.download('punkt')
+nltk.download('stopwords')
 
-pipeline = transformers.pipeline(
-    "text-generation",
-    model=model_id,
-    model_kwargs={"torch_dtype": torch.bfloat16},
-    device_map="auto",
-)
-
-messages = [
-    {"role": "system", "content": "You are a pirate chatbot who always responds in pirate speak!"},
-    {"role": "user", "content": "Who are you?"},
+# Sample text data
+text_data = [
+    "The bank refused my loan application due to McCain Act regulations.",
+    "I need guidance on banking requirements for federal contracts.",
+    "My credit application was denied because of Section 889 compliance.",
+    "The delay in fund approval is linked to account restrictions.",
+    "Loan application issues under McCain Act need resolution urgently."
 ]
 
-terminators = [
-    pipeline.tokenizer.eos_token_id,
-    pipeline.tokenizer.convert_tokens_to_ids("<|eot_id|>")
-]
+# Preprocessing function
+def preprocess_text(text):
+    stop_words = set(stopwords.words('english'))
+    words = word_tokenize(text.lower())
+    return [word for word in words if word.isalnum() and word not in stop_words]
 
-outputs = pipeline(
-    messages,
-    max_new_tokens=256,
-    eos_token_id=terminators,
-    do_sample=True,
-    temperature=0.6,
-    top_p=0.9,
+# Preprocess the text data
+processed_texts = [preprocess_text(text) for text in text_data]
+
+# Create a dictionary and corpus for LDA
+dictionary = corpora.Dictionary(processed_texts)
+corpus = [dictionary.doc2bow(text) for text in processed_texts]
+
+# Build LDA model
+lda_model = models.LdaModel(
+    corpus=corpus, 
+    id2word=dictionary, 
+    num_topics=3,  # Number of topics
+    passes=10,     # Number of iterations
+    random_state=42
 )
-print(outputs[0]["generated_text"][-1])
+
+# Display topics
+for idx, topic in lda_model.print_topics(num_topics=3, num_words=5):
+    print(f"Topic {idx + 1}: {topic}")
