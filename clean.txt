@@ -1,33 +1,37 @@
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from docx import Document
+from docx.shared import Pt
+from docx.oxml import parse_xml
+from docx.oxml.ns import nsdecls
 
-# Load the tokenizer and model
-model_name = "google/flan-t5-base"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+# Create a new Word document
+doc = Document()
 
-# Define a function to summarize a chunk of text
-def summarize_text(text, max_length=100, min_length=30):
-    inputs = tokenizer.encode("summarize: " + text, return_tensors="pt", truncation=True)
-    summary_ids = model.generate(inputs, max_length=max_length, min_length=min_length, length_penalty=2.0, num_beams=4)
-    return tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+# Add paragraphs
+doc.add_paragraph("This is the first paragraph.")
+doc.add_paragraph("This document contains a table with highlighted headers.")
 
-# Chunk the document into smaller parts
-def chunk_document(document, chunk_size=512):
-    tokens = tokenizer.encode(document)
-    for i in range(0, len(tokens), chunk_size):
-        yield tokenizer.decode(tokens[i:i + chunk_size])
+# Sample table data
+table_data = [
+    ["Header 1", "Header 2", "Header 3"],
+    ["Row 1 Col 1", "Row 1 Col 2", "Row 1 Col 3"],
+    ["Row 2 Col 1", "Row 2 Col 2", "Row 2 Col 3"]
+]
 
-# Process the long document
-def summarize_long_document(document, chunk_size=512, max_length=100, min_length=30):
-    chunks = list(chunk_document(document, chunk_size=chunk_size))
-    summaries = [summarize_text(chunk, max_length=max_length, min_length=min_length) for chunk in chunks]
-    combined_summary = " ".join(summaries)
-    return summarize_text(combined_summary)  # Optionally, summarize the combined summary
+# Add a table to the document
+table = doc.add_table(rows=len(table_data), cols=len(table_data[0]))
 
-# Example usage
-long_document = """Your very long document text goes here. This could be several paragraphs or pages long. 
-The content will be chunked and summarized effectively."""
+# Populate the table
+for row_idx, row_data in enumerate(table_data):
+    for col_idx, cell_data in enumerate(row_data):
+        cell = table.cell(row_idx, col_idx)
+        cell.text = cell_data
 
-final_summary = summarize_long_document(long_document, chunk_size=512, max_length=100, min_length=30)
-print("Final Summary:")
-print(final_summary)
+        # Highlight first row (header) in yellow
+        if row_idx == 0:
+            cell_xml = cell._tc.get_or_add_tcPr()
+            cell_xml.append(parse_xml(r'<w:shd {} w:fill="FFFF00"/>'.format(nsdecls('w'))))
+
+# Save the document
+doc.save("sample_document.docx")
+
+print("Word document created successfully!")
