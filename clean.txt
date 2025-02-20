@@ -1,37 +1,50 @@
 from docx import Document
-from docx.shared import Pt
-from docx.oxml import parse_xml
-from docx.oxml.ns import nsdecls
+import spacy
 
-# Create a new Word document
-doc = Document()
+def chunk_document(doc_path):
+    """
+    Splits a Word document into sections based on headings.
+    
+    Parameters:
+        doc_path (str): Path to the .docx file.
+    
+    Returns:
+        list of dict: Each dictionary contains 'heading' and 'content'.
+    """
+    doc = Document(doc_path)
+    nlp = spacy.load("en_core_web_sm")
+    
+    chunks = []
+    current_heading = "Introduction"  # Default section for pre-heading content
+    current_text = []
 
-# Add paragraphs
-doc.add_paragraph("This is the first paragraph.")
-doc.add_paragraph("This document contains a table with highlighted headers.")
+    for para in doc.paragraphs:
+        if para.style.name.startswith("Heading"):  # Detect heading
+            if current_text:
+                chunks.append({
+                    "heading": current_heading,
+                    "content": " ".join(current_text)
+                })
+                current_text = []
+            current_heading = para.text.strip()  # Update section name
+        else:
+            if para.text.strip():
+                current_text.append(para.text.strip())
 
-# Sample table data
-table_data = [
-    ["Header 1", "Header 2", "Header 3"],
-    ["Row 1 Col 1", "Row 1 Col 2", "Row 1 Col 3"],
-    ["Row 2 Col 1", "Row 2 Col 2", "Row 2 Col 3"]
-]
+    # Append last section
+    if current_text:
+        chunks.append({
+            "heading": current_heading,
+            "content": " ".join(current_text)
+        })
+    
+    return chunks
 
-# Add a table to the document
-table = doc.add_table(rows=len(table_data), cols=len(table_data[0]))
+# Example Usage
+if __name__ == "__main__":
+    doc_path = "sample.docx"  # Replace with your file path
+    chunks = chunk_document(doc_path)
 
-# Populate the table
-for row_idx, row_data in enumerate(table_data):
-    for col_idx, cell_data in enumerate(row_data):
-        cell = table.cell(row_idx, col_idx)
-        cell.text = cell_data
-
-        # Highlight first row (header) in yellow
-        if row_idx == 0:
-            cell_xml = cell._tc.get_or_add_tcPr()
-            cell_xml.append(parse_xml(r'<w:shd {} w:fill="FFFF00"/>'.format(nsdecls('w'))))
-
-# Save the document
-doc.save("sample_document.docx")
-
-print("Word document created successfully!")
+    # Display the structured chunks
+    for chunk in chunks:
+        print(f"Section: {chunk['heading']}\nContent: {chunk['content'][:200]}...\n{'-'*50}")
