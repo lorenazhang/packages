@@ -1,7 +1,7 @@
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
-from openpyxl.styles import Alignment
+from openpyxl.styles import Alignment, Border, Side
 
 # Sample DataFrame
 data = {
@@ -25,7 +25,15 @@ ws.freeze_panes = "A2"
 # Enable filter on the top row
 ws.auto_filter.ref = ws.dimensions  # Apply filter to the entire range
 
-# Adjust column width, wrap text, and apply top alignment
+# Define border style (thin border)
+thin_border = Border(
+    left=Side(style="thin"),
+    right=Side(style="thin"),
+    top=Side(style="thin"),
+    bottom=Side(style="thin"),
+)
+
+# Adjust column width, wrap text, top align, and apply borders
 for col_idx, col_cells in enumerate(ws.iter_cols(), 1):
     max_length = max(len(str(cell.value)) if cell.value else 0 for cell in col_cells) + 2
     col_letter = get_column_letter(col_idx)
@@ -33,6 +41,7 @@ for col_idx, col_cells in enumerate(ws.iter_cols(), 1):
 
     for cell in col_cells:
         cell.alignment = Alignment(wrap_text=True, vertical="top")  # Wrap text + Top align
+        cell.border = thin_border  # Apply thin borders
 
 # Save the updated Excel file
 wb.save(file_path)
