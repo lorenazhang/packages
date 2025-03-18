@@ -1,10 +1,10 @@
 import re
 
 class BaseChunker:
-    def __init__(self, min_tokens=20, max_tokens=300, overlap_tokens=10):
+    def __init__(self, min_tokens=20, chunk_size=300, chunk_overlap=10):
         self.min_tokens = min_tokens
-        self.max_tokens = max_tokens
-        self.overlap_tokens = overlap_tokens
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
     
     def _combine_chunks(self, tokens):
         chunks = []
@@ -15,13 +15,13 @@ class BaseChunker:
         while i < len(tokens):
             token = tokens[i]
             
-            # If adding this token exceeds max_tokens, split here
-            if current_token_count + len(token.split()) > self.max_tokens:
+            # If adding this token exceeds chunk_size, split here
+            if current_token_count + len(token.split()) > self.chunk_size:
                 if current_chunk:
                     chunks.append(' '.join(current_chunk))
                     
                     # Add overlap tokens for context
-                    overlap = current_chunk[-self.overlap_tokens:] if self.overlap_tokens > 0 else []
+                    overlap = current_chunk[-self.chunk_overlap:] if self.chunk_overlap > 0 else []
                     current_chunk = overlap
                     current_token_count = len(overlap)
 
@@ -34,7 +34,7 @@ class BaseChunker:
                 chunks.append(' '.join(current_chunk))
                 
                 # Add overlap tokens for context
-                overlap = current_chunk[-self.overlap_tokens:] if self.overlap_tokens > 0 else []
+                overlap = current_chunk[-self.chunk_overlap:] if self.chunk_overlap > 0 else []
                 current_chunk = overlap
                 current_token_count = len(overlap)
 
@@ -53,8 +53,8 @@ class ParagraphChunker(BaseChunker):
 
 
 class SectionChunker(BaseChunker):
-    def __init__(self, section_pattern=r'(^#\s|^##\s|^===)', min_tokens=20, max_tokens=500, overlap_tokens=10):
-        super().__init__(min_tokens, max_tokens, overlap_tokens)
+    def __init__(self, section_pattern=r'(^#\s|^##\s|^===)', min_tokens=20, chunk_size=500, chunk_overlap=10):
+        super().__init__(min_tokens, chunk_size, chunk_overlap)
         self.section_pattern = re.compile(section_pattern, re.MULTILINE)
 
     def chunk(self, text):
@@ -85,14 +85,14 @@ CNNs are a type of neural network designed to process grid-like data, such as im
 """
 
     # Chunk by paragraph (with overlap)
-    paragraph_chunker = ParagraphChunker(min_tokens=10, max_tokens=50, overlap_tokens=5)
+    paragraph_chunker = ParagraphChunker(min_tokens=10, chunk_size=50, chunk_overlap=5)
     paragraph_chunks = paragraph_chunker.chunk(text)
     print("\n--- Paragraph Chunks ---")
     for i, chunk in enumerate(paragraph_chunks):
         print(f"Chunk {i + 1}:\n{chunk}\n")
 
     # Chunk by section (with overlap)
-    section_chunker = SectionChunker(overlap_tokens=5)
+    section_chunker = SectionChunker(chunk_overlap=5)
     section_chunks = section_chunker.chunk(text)
     print("\n--- Section Chunks ---")
     for i, chunk in enumerate(section_chunks):
