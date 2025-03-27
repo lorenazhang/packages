@@ -1,3 +1,45 @@
+import re
+import pandas as pd
+
+# Example input text
+text = """
+1.1 Question 1
+answer 1
+
+1.2, question 2
+answer 2
+
+2.1 question 3
+answer 3
+"""
+
+# Define the regex pattern to match question number, question, and answer
+pattern = re.compile(r'(\d+\.\d+),?\s*(.+)\n(.+?)(?=\n\d+\.\d+|\Z)', re.DOTALL)
+
+# Find all matches using the pattern
+matches = pattern.findall(text.strip())
+
+# Create lists to store data
+question_numbers = []
+questions = []
+answers = []
+
+# Extract data from matches
+for num, ques, ans in matches:
+    question_numbers.append(num.strip())
+    questions.append(ques.strip())
+    answers.append(ans.strip())
+
+# Create a DataFrame
+df = pd.DataFrame({
+    'question number': question_numbers,
+    'question': questions,
+    'answer': answers
+})
+
+print(df)
+---------------------------------------------------------------------
+
 import pdfplumber
 
 # Open the PDF file
