@@ -1,36 +1,32 @@
 import re
 import pandas as pd
 
-# Example input text
-text = """
-1.1 Question 1
-answer 1
 
-1.2, question 2
-answer 2
+# Split the text by double newline to get individual Q&A blocks
+blocks = [block.strip() for block in text.strip().split('\n\n') if block.strip()]
 
-2.1 question 3
-answer 3
-"""
-
-# Define the regex pattern to match question number, question, and answer
-pattern = re.compile(r'(\d+\.\d+),?\s*(.+)\n(.+?)(?=\n\d+\.\d+|\Z)', re.DOTALL)
-
-# Find all matches using the pattern
-matches = pattern.findall(text.strip())
-
-# Create lists to store data
 question_numbers = []
 questions = []
 answers = []
 
-# Extract data from matches
-for num, ques, ans in matches:
-    question_numbers.append(num.strip())
-    questions.append(ques.strip())
-    answers.append(ans.strip())
+for block in blocks:
+    lines = block.split('\n')
+    
+    # Extract question number and question
+    match = re.match(r'(\d+\.\d+)\s+(.*)', lines[0])
+    if match:
+        q_number = match.group(1).strip()
+        q_text = match.group(2).strip()
+        
+        # The remaining lines are the answer (joined by newline)
+        ans_text = '\n'.join(lines[1:]).strip()
+        
+        # Store results
+        question_numbers.append(q_number)
+        questions.append(q_text)
+        answers.append(ans_text)
 
-# Create a DataFrame
+# Create DataFrame
 df = pd.DataFrame({
     'question number': question_numbers,
     'question': questions,
