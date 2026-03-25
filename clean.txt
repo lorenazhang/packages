@@ -1,1 +1,22 @@
-
+kw_list = [
+    "reimburse / reimbursed / reimbursement",
+    "waive / waived / waiver",
+    "refund / refunded / refunds",
+    "credit to account",
+    "balance credit / balance waived",
+    "permanent credit / chargeback / buyback",
+    "compensation",
+    "vsp",
+    "loss of use / interest refund / interest waived",
+    "finance charge waived",
+    "overage issued",
+    "customer appreciation payment",
+    "payment reimbursement",
+    "out of pocket",
+    "tax penalty / tax penalties",
+    "auto refund / auto buyback / auto unwind",
+    "dealership refund / dealership money",
+    "equipment refund",
+    "merchant refund / waive / credit / buyback / buyout / discount",
+    "rewards cash / rewards credit"
+]
