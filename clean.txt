@@ -1,1 +1,5 @@
 
+    (account\s+)?(open|opened|close|closed|reopen|reopened)
+    |due\s+date\s+change
+    |rate\s+change
+    |payment\s+back\s*dated
