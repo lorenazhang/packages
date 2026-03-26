@@ -1,5 +1,5 @@
-
-    (account\s+)?(open|opened|close|closed|reopen|reopened)
-    |due\s+date\s+change
-    |rate\s+change
-    |payment\s+back\s*dated
+(open|opened|close|closed|reopen|reopened)\s+[^\n]*?\s+account
+|account\s+[^\n]*?\s+(open|opened|close|closed|reopen|reopened)
+|due\s+date\s+[^\n]*?\s+change
+|rate\s+[^\n]*?\s+change
+|payment\s+[^\n]*?\s+back[-\s]?dated
