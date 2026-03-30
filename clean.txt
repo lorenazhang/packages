@@ -1,1 +1,112 @@
+import re
+import pandas as pd
 
+# =========================
+# Monetary
+# =========================
+monetary_rules = [
+    ("reimburse / reimbursed / reimbursement", r"\breimburs(e|ed|ement)\b"),
+    ("waive / waived / waiver", r"\bwaiv(e|ed|er)\b"),
+    ("refund / refunded / refunds", r"\brefun(d|ds|ded)\b"),
+    ("credit to account", r"\bcredit\s+to\s+account\b"),
+    ("balance credit / balance waived", r"\bbalance\s+(credit|waived)\b"),
+    ("permanent credit / chargeback / buyback", r"\bpermanent\s+(credit|chargeback|buyback)\b"),
+    ("compensation", r"\bcompensation\b"),
+    ("vsp", r"\bvsp\b"),
+    ("loss of use / interest refund / interest waived", r"\bloss\s+of\s+use\b|\binterest\s+(refund|waived)\b"),
+    ("finance charge waived", r"\bfinance\s+charge\s+waived\b"),
+    ("overage issued", r"\boverage\s+issued\b"),
+    ("customer appreciation payment", r"\bcustomer\s+appreciation\s+payment\b"),
+    ("payment reimbursement", r"\bpayment\s+reimbursement\b"),
+    ("out of pocket", r"\bout[-\s]?of[-\s]?pocket\b"),
+    ("tax penalty / tax penalties", r"\btax\s+penalt(y|ies)\b"),
+    ("auto refund / auto buyback / auto unwind", r"\bauto.*(refund|buyback|unwind)\b"),
+    ("dealership refund / dealership money", r"\bdealership.*(refund|money)\b"),
+    ("equipment refund", r"\bequipment.*refund\b"),
+    ("merchant refund / waive / credit / buyback / buyout / discount", r"\bmerchant.*(refund|waive|credit|buyback|buyout|discount)\b"),
+    ("rewards cash / rewards credit", r"\brewards?.*(cash|credit)\b"),
+]
+
+# =========================
+# Non-monetary
+# =========================
+non_monetary_rules = [
+    ("cease and desist", r"\bcease(?:\s+and\s+)desist\b"),
+    ("forbearance / repayment / arrangement", r"\b(forbearance|repayment(?:\s+payment)?|arrangement(s)?)\b"),
+    ("reinstate repayment benefit", r"\breinstate(?:ing)?(?:\s+as)?(?:\s+lost)?\s+repayment\s+benefit\b"),
+    ("early charge-off / collection alternative", r"\b(early\s+charge[-\s]?off|collection\s+alternative)\b"),
+    ("credit report correction / update", r"\b(update|correct|submit(?:ting)?\s+correction\s+to)\s+(?:the\s+)?credit\s+report\b"),
+    ("remove / suppress / mask credit inquiry", r"\b(remove|suppress|mask)\s+credit\s+inquiry(ies)?\b"),
+    ("remove CCC / compliance condition code", r"\b(remove\s+(?:.*?\s)?\bcc\b|\bbcc\b.*\bremove\b|\bcompliance\s+condition\s+code\b)\b"),
+    ("account open/close/reopen", r"\b(open|opened|close|closed|reopen|reopened)\b\s+[^\n]*?\s+\baccount\b|\baccount\b\s+[^\n]*?\s+\b(open|opened|close|closed|reopen|reopened)\b"),
+    ("due date change", r"\bdue\s+date\b\s+[^\n]*?\s+\bchange\b"),
+    ("rate change", r"\brate\b\s+[^\n]*?\s+\bchange\b"),
+    ("payment back dated", r"\bpayment\b\s+[^\n]*?\s+\bback[-\s]?dated\b"),
+    ("stop payment", r"\bstop\s+payment\b"),
+]
+
+# =========================
+# Closed
+# =========================
+closed_rules = [
+    ("unable / cannot reach or locate customer", r"\b(unable|cannot|can't|could\s+not|unsuccessful)\s+(to\s+)?(reach|contact|locate|identify|find)\b"),
+    ("unable to send / deliver resolution letter", r"\bunable\s+to\s+(send|deliver)\s+(resolution\s+)?letter\b"),
+    ("no response / no contact / no callback", r"\bno\s+(response|contact|callback)\b"),
+    ("customer declined / refused contact", r"\bcustomer\s+(declined|refused|does\s+not\s+want|do\s+not\s+wish)\s+(contact|follow[\s-]?up|outreach)\b"),
+    ("unable to verify / authenticate customer", r"\bunable\s+to\s+(verify|authenticate)\s+customer\b"),
+    ("invalid contact / address / phone / email", r"\binvalid\s+(contact|address|phone|email)\b"),
+    ("legal department sent / handled letter", r"\blegal\s+(department|team)\s+(sent|mailed|issued|handled)\s+(the\s+)?(letter|notice|communication)\b"),
+    ("letter sent / issued by legal", r"\bletter\s+(sent|issued)\s+by\s+legal\b"),
+    ("referred to legal", r"\breferred\s+to\s+legal\b"),
+]
+
+
+def compile_rules(rule_list):
+    return [(kw, re.compile(pattern, flags=re.IGNORECASE)) for kw, pattern in rule_list]
+
+monetary_rules_compiled = compile_rules(monetary_rules)
+non_monetary_rules_compiled = compile_rules(non_monetary_rules)
+closed_rules_compiled = compile_rules(closed_rules)
+
+def rule_based_resolution(text):
+    if pd.isna(text) or str(text).strip() == "":
+        return pd.Series({
+            "resolution_rule": "NA",
+            "rule_hit_kw": None
+        })
+
+    text = str(text)
+
+    # monetary
+    if "$" in text:
+        for kw, pattern in monetary_rules_compiled:
+            if pattern.search(text):
+                return pd.Series({
+                    "resolution_rule": "monetary",
+                    "rule_hit_kw": kw
+                })
+
+    # non-monetary
+    for kw, pattern in non_monetary_rules_compiled:
+        if pattern.search(text):
+            return pd.Series({
+                "resolution_rule": "non-monetary",
+                "rule_hit_kw": kw
+            })
+
+    # closed
+    for kw, pattern in closed_rules_compiled:
+        if pattern.search(text):
+            return pd.Series({
+                "resolution_rule": "closed",
+                "rule_hit_kw": kw
+            })
+
+    # fallback
+    return pd.Series({
+        "resolution_rule": "NA",
+        "rule_hit_kw": None
+    })
+
+
+df[["resolution_rule", "rule_hit_kw"]] = df["resolution_note"].apply(rule_based_resolution)
