@@ -1,61 +1,81 @@
 import re
 import pandas as pd
 
-# =========================
-# Monetary
-# =========================
+non_monetary_rules = [
+    ("cease and desist", r"\bcease\s+(and|&)\s+desist\b"),
+    ("charged off", r"\bcharg(e|ed|es)\s+off\b"),
+    ("forbearance / repayment / payment arrangement", r"\b(forbearance|repayment|payment)\s+arrangement(s)?\b"),
+    ("reinstate repayment benefit", r"\b(reinstate(e|ing))\s+(?:a\s+)?(lost\s+)?repayment\s+benefit\b"),
+    ("stop collection", r"\b(stop|stopped|stops)\s+(?:[^\n]*?)\s+collection\b"),
+    ("early charge-off / collection alternative", r"\b(early\s+charge[-\s]?off|collection\s+alternative)\b"),
+    ("credit report / history / bureau correction", r"\b(update|correct|submit(?:ting)?)\s+correction\s+to\s+(?:the\s+)?credit\s+(report|history|bureau)\b"),
+    ("remove / suppress / mask credit inquiry", r"\b(remove|suppress|mask)\s+credit\s+inquir(y|ies)\b"),
+    ("remove CCC / compliance condition code", r"\b(remove\s+(?:.*?\s)?cc.*remove|compliance\s+condition\s+code)\b"),
+    ("change / update account terms", r"\b(change|update)\s+(account\s+)?terms\b"),
+    ("credit limit increase / decrease / restore / removal", r"\bcredit\s+limit\s+(increase|decrease|restore|remov(e|al))\b"),
+    ("due date / APR / rate change", r"\b(due\s+date|apr|rate)\s+change\b"),
+    ("suppress / stop fee assessment", r"\b(suppress|stop)\s+fee\s+assessment\b"),
+    ("open / reopen / close account", r"\b(open|reopen|close)\s+(the\s+)?account\b"),
+    ("payment redistribution", r"\b(payment\s+)?redistribut(?:e|ion)\b"),
+    ("expedite relief / processing / already in queue / pre-existing queue", r"\b(expedite(?:d)?)\s+(relief|processing)|already\s+in\s+queue|pre[-\s]?existing\s+queue\b"),
+    ("provisional / temporary credit", r"\b(provisional|temporary)\s+credit\b"),
+    ("update demographics / address / name change / phone", r"\b(update\s+demographics?|address|name\s+change|phone)\b"),
+    ("statement delivery preference / e-delivery / paperless", r"\b(statement\s+delivery\s+preference|e-?delivery|paperless)\b"),
+    ("report lost / stolen card or account", r"\b(report\s+(?:card|account)\s+lost\s+or\s+stolen)\b"),
+    ("unlock online access / online enrollment", r"\bunlock\s+online\s+access|online\s+enrollment\b"),
+    ("overdraft protection / odp / dcos / debit card linkage", r"\b(overdraft\s+protection|odp|dcos|debit)\s+card\s+linkage\b"),
+    ("balance transfer / cash transfer initiate / modify / stop", r"\b(balance|cash)\s+transfer\s+(initiat(e|ed)|modify|stop)\b"),
+    ("stop payment", r"\bstop\s+payment\b"),
+    ("remove float hold / account hold", r"\bremove\s+(?:payment\s+)?float\s+hold|remove\s+account\s+hold\b"),
+    ("update return item counter", r"\bupdate\s+return\s+item\s+counter\b"),
+    ("correct transaction wrong amount", r"\bcorrect\s+a?\s*transaction.*wrong\s+amount\b"),
+    ("lien / collateral release / title update", r"\b(collateral|lien)\s+release|title\s+update\b"),
+    ("co-signer removal / joint account holder removal", r"\bco-?signer\s+removal|joint\s+account\s+holder\s+removal\b"),
+    ("foreclosure alternative", r"\bforeclosure\s+alternative\b"),
+    ("vehicle out of country authorization", r"\bvehicle\s+out\s+of\s+country\s+authorization\b"),
+    ("rewards / points adjustment", r"\b(rewards?)\s+points?\s+adjustment\b"),
+    ("reverse / reversal / reversed denied application", r"\b(reverse|reversal|reversed).*(denied|denial).*\bapplication\b"),
+    ("arrange in-branch appointment", r"\barrang(e|ed|ing)\s+in[-\s]?branch\s+appointment\b"),
+    ("merchant services rates / pricing / lease / decrease monthly fee", r"\bmerchant\s+services?.*(rates?|pricing|lease)|decrease\s+in\s+monthly\s+fee\b"),
+    ("open/opened/close/closed/reopen/reopened ... account", r"\b(open|opened|close|closed|reopen|reopened)\b\s+[^\n]*?\s+\baccount\b"),
+    ("account ... open/opened/close/closed/reopen/reopened", r"\baccount\b\s+[^\n]*?\s+\b(open|opened|close|closed|reopen|reopened)\b"),
+    ("due date ... change", r"\bdue\s+date\b\s+[^\n]*?\s+\bchange\b"),
+    ("rate ... change", r"\brate\b\s+[^\n]*?\s+\bchange\b"),
+    ("payment ... back dated", r"\bpayment\b\s+[^\n]*?\s+\bback[-\s]?dated\b"),
+]
+
+
 monetary_rules = [
     ("reimburse / reimbursed / reimbursement", r"\breimburs(e|ed|ement)\b"),
     ("waive / waived / waiver", r"\bwaiv(e|ed|er)\b"),
-    ("refund / refunded / refunds", r"\brefun(d|ds|ded)\b"),
+    ("refund / refunds / refunded", r"\brefun(d|ds|ded)\b"),
     ("credit to account", r"\bcredit\s+to\s+account\b"),
     ("balance credit / balance waived", r"\bbalance\s+(credit|waived)\b"),
     ("permanent credit / chargeback / buyback", r"\bpermanent\s+(credit|chargeback|buyback)\b"),
     ("compensation", r"\bcompensation\b"),
-    ("vsp", r"\bvsp\b"),
-    ("loss of use / interest refund / interest waived", r"\bloss\s+of\s+use\b|\binterest\s+(refund|waived)\b"),
+    ("loss of use / interest refund / interest waived", r"\bloss\s+of\s+use|interest\s+(refund|waived)\b"),
     ("finance charge waived", r"\bfinance\s+charge\s+waived\b"),
     ("overage issued", r"\boverage\s+issued\b"),
     ("customer appreciation payment", r"\bcustomer\s+appreciation\s+payment\b"),
     ("payment reimbursement", r"\bpayment\s+reimbursement\b"),
     ("out of pocket", r"\bout[-\s]?of[-\s]?pocket\b"),
     ("tax penalty / tax penalties", r"\btax\s+penalt(y|ies)\b"),
-    ("auto refund / auto buyback / auto unwind", r"\bauto.*(refund|buyback|unwind)\b"),
-    ("dealership refund / dealership money", r"\bdealership.*(refund|money)\b"),
+    ("auto refund / buyback / unwind", r"\bauto.*(refund|buyback|unwind)\b"),
+    ("dealership refund / money", r"\bdealership.*(refund|money)\b"),
     ("equipment refund", r"\bequipment.*refund\b"),
     ("merchant refund / waive / credit / buyback / buyout / discount", r"\bmerchant.*(refund|waive|credit|buyback|buyout|discount)\b"),
     ("rewards cash / rewards credit", r"\brewards?.*(cash|credit)\b"),
 ]
 
-# =========================
-# Non-monetary
-# =========================
-non_monetary_rules = [
-    ("cease and desist", r"\bcease(?:\s+and\s+)desist\b"),
-    ("forbearance / repayment / arrangement", r"\b(forbearance|repayment(?:\s+payment)?|arrangement(s)?)\b"),
-    ("reinstate repayment benefit", r"\breinstate(?:ing)?(?:\s+as)?(?:\s+lost)?\s+repayment\s+benefit\b"),
-    ("early charge-off / collection alternative", r"\b(early\s+charge[-\s]?off|collection\s+alternative)\b"),
-    ("credit report correction / update", r"\b(update|correct|submit(?:ting)?\s+correction\s+to)\s+(?:the\s+)?credit\s+report\b"),
-    ("remove / suppress / mask credit inquiry", r"\b(remove|suppress|mask)\s+credit\s+inquiry(ies)?\b"),
-    ("remove CCC / compliance condition code", r"\b(remove\s+(?:.*?\s)?\bcc\b|\bbcc\b.*\bremove\b|\bcompliance\s+condition\s+code\b)\b"),
-    ("account open/close/reopen", r"\b(open|opened|close|closed|reopen|reopened)\b\s+[^\n]*?\s+\baccount\b|\baccount\b\s+[^\n]*?\s+\b(open|opened|close|closed|reopen|reopened)\b"),
-    ("due date change", r"\bdue\s+date\b\s+[^\n]*?\s+\bchange\b"),
-    ("rate change", r"\brate\b\s+[^\n]*?\s+\bchange\b"),
-    ("payment back dated", r"\bpayment\b\s+[^\n]*?\s+\bback[-\s]?dated\b"),
-    ("stop payment", r"\bstop\s+payment\b"),
-]
 
-# =========================
-# Closed
-# =========================
 closed_rules = [
-    ("unable / cannot reach or locate customer", r"\b(unable|cannot|can't|could\s+not|unsuccessful)\s+(to\s+)?(reach|contact|locate|identify|find)\b"),
+    ("unable / cannot / unsuccessful to reach / contact / locate / identify / find", r"\b(unable|cannot|can't|could\s+not|unsuccessful)\s+(to\s+)?(reach|contact|locate|identify|find)\b"),
     ("unable to send / deliver resolution letter", r"\bunable\s+to\s+(send|deliver)\s+(resolution\s+)?letter\b"),
     ("no response / no contact / no callback", r"\bno\s+(response|contact|callback)\b"),
-    ("customer declined / refused contact", r"\bcustomer\s+(declined|refused|does\s+not\s+want|do\s+not\s+wish)\s+(contact|follow[\s-]?up|outreach)\b"),
+    ("customer declined / refused / does not want contact / follow-up / outreach", r"\bcustomer\s+(declined|refused|does\s+not\s+want|do\s+not\s+wish)\s+(contact|follow[\s-]?up|outreach)\b"),
     ("unable to verify / authenticate customer", r"\bunable\s+to\s+(verify|authenticate)\s+customer\b"),
     ("invalid contact / address / phone / email", r"\binvalid\s+(contact|address|phone|email)\b"),
-    ("legal department sent / handled letter", r"\blegal\s+(department|team)\s+(sent|mailed|issued|handled)\s+(the\s+)?(letter|notice|communication)\b"),
+    ("legal department / team sent / mailed / issued / handled letter", r"\blegal\s+(department|team)\s+(sent|mailed|issued|handled)\s+(the\s+)?(letter|notice|communication)\b"),
     ("letter sent / issued by legal", r"\bletter\s+(sent|issued)\s+by\s+legal\b"),
     ("referred to legal", r"\breferred\s+to\s+legal\b"),
 ]
