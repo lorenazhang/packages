@@ -1,85 +1,23 @@
-def split_into_sentences(text):
-    if pd.isna(text) or str(text).strip() == "":
-        return []
-    
-    text = str(text).strip()
-    
-    # split on . ! ? followed by space
-    sentences = re.split(r'(?<=[.!?])\s+', text)
-    
-    # remove empty space
-    return [s.strip() for s in sentences if s.strip()]
-      
-def find_matching_sentence(text, compiled_rules):
-    sentences = split_into_sentences(text)
-    
-    for sentence in sentences:
-        for kw, pattern in compiled_rules:
-            if pattern.search(sentence):
-                return sentence, kw
-    
-    return None, None
+CREATE VOLATILE TABLE vt_interaction_id AS
+(
+    SELECT TOP 5
+        interaction_id
+    FROM SBX_CEDA_POC.wf_lob_byodb_full
+) WITH DATA
+PRIMARY INDEX (interaction_id)
+ON COMMIT PRESERVE ROWS;
 
-def rule_based_resolution(text):
-    if pd.isna(text) or str(text).strip() == "":
-        return pd.Series({
-            "resolution_rule": "NA",
-            "rule_hit_sentence": None,
-            "rule_hit_kw": None
-        })
 
-    text = str(text)
-
-    # 1) monetary: must have both $ and monetary keyword
-    if "$" in text:
-        sentence, kw = find_matching_sentence(text, monetary_rules_compiled)
-        if sentence is not None:
-            return pd.Series({
-                "resolution_rule": "monetary",
-                "rule_hit_sentence": sentence,
-                "rule_hit_kw": kw
-            })
-
-    # 2) non-monetary
-    sentence, kw = find_matching_sentence(text, non_monetary_rules_compiled)
-    if sentence is not None:
-        return pd.Series({
-            "resolution_rule": "non-monetary",
-            "rule_hit_sentence": sentence,
-            "rule_hit_kw": kw
-        })
-
-    # 3) closed
-    sentence, kw = find_matching_sentence(text, closed_rules_compiled)
-    if sentence is not None:
-        return pd.Series({
-            "resolution_rule": "closed",
-            "rule_hit_sentence": sentence,
-            "rule_hit_kw": kw
-        })
-
-    return pd.Series({
-        "resolution_rule": "NA",
-        "rule_hit_sentence": None,
-        "rule_hit_kw": None
-    })
-
-df[["resolution_rule", "rule_hit_sentence", "rule_hit_kw"]] = (
-    df["resolution_note"].apply(rule_based_resolution)
-)
-
-def find_all_matching_sentences(text, compiled_rules):
-    sentences = split_into_sentences(text)
-    hits = []
-    
-    for sentence in sentences:
-        for kw, pattern in compiled_rules:
-            if pattern.search(sentence):
-                hits.append(sentence)
-                break   # avoid duplicate appends for same sentence
-    
-    return hits
-
-df["rule_hit_sentences"] = df["resolution_note"].apply(
-    lambda x: find_all_matching_sentences(x, non_monetary_rules_compiled)
-)
+SELECT
+    b.load_date,
+    b.interaction_id,
+    b.interaction_dt,
+    b.transcript_full,
+    m.primary_lob,
+    m.groupname,
+    m.sublob
+FROM SBX_CEDA_POC.wf_lob_byodb_full b
+JOIN vt_interaction_id v
+    ON b.interaction_id = v.interaction_id
+LEFT JOIN SBX_CEDA_POC.wf_lob_metadata_vw m
+    ON b.interaction_id = m.interaction_id;
