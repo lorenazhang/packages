@@ -1,62 +1,115 @@
-import re
+import json
+import pandas as pd
+import time
 
-mapping = [
-    # Mobile / Online
-    ("Mobile/Online", "Bill Pay", ["bill pay"]),
-    
-    ("Mobile/Online", "Business Online Banking/Business Payments",
-     ["business online banking", "business payments"]),
-    
-    ("Mobile/Online", "Direct Pay", ["direct pay"]),
-    
-    ("Mobile/Online", "Mobile Deposit",
-     ["mobile deposit", "deposit and phone", "image rejected"]),
-    
-    ("Mobile/Online", "Mobile Payment/Wallet",
-     ["mobile payment", "mobile pmt", "mobile wallet"]),
-    
-    ("Mobile/Online", "Mobile/Online Wires",
-     ["mobile wire", "online wire"]),
-    
-    ("Mobile/Online", "Online Banking",
-     ["online banking", "banking online"]),
-    
-    ("Mobile/Online", "Paze", ["paze"]),
-    
-    ("Mobile/Online", "Transfers", ["transfers"]),
-    
-    ("Mobile/Online", "Zelle", ["zelle"]),
+BATCH_SIZE = 200
 
-    # Deposit / money movement
-    ("Deposit / money movement", "Cashier’s Check/Money Order",
-     ["cashier's check", "money order"]),
-    
-    ("Deposit / money movement", "Check Order",
-     ["check order", "order checks", "harland clark"]),
-    
-    ("Deposit / money movement", "Wire",
-     ["wire"])
-]
 
-compiled_mapping = []
+def clean_llm_json(response_text):
+    """
+    Remove markdown fences and parse JSON.
+    """
+    text = response_text.strip()
+    text = text.replace("```json", "").replace("```", "").strip()
 
-for category, product, kws in mapping:
-    pattern = re.compile(
-        r'\b(' + '|'.join(re.escape(k) for k in kws) + r')\b',
-        flags=re.IGNORECASE
+    # in case model adds text before JSON
+    start_obj = text.find("{")
+    start_arr = text.find("[")
+
+    if start_obj == -1 and start_arr == -1:
+        raise ValueError("No JSON object or array found in response")
+
+    if start_obj == -1:
+        start = start_arr
+    elif start_arr == -1:
+        start = start_obj
+    else:
+        start = min(start_obj, start_arr)
+
+    text = text[start:]
+
+    return json.loads(text)
+
+
+def build_batch_prompt(batch_df):
+    summary_notes_concat = "\n\n".join(
+        f"[COMPLAINT {i+1}]\n{note}"
+        for i, note in enumerate(batch_df["summary_note"].fillna(""))
     )
-    compiled_mapping.append((category, product, pattern))
+
+    prompt = f"""
+Task:
+Read the complaint summary notes and identify the main reasons why customers called.
+
+Instructions:
+- Each block labeled [COMPLAINT n] is one complaint.
+- Count by complaint, not by number of times words appear.
+- A complaint may belong to multiple reasons if it contains multiple distinct issues.
+- Merge duplicate or near-duplicate reasons.
+- Use concise customer-facing reason names.
+- Sort by count descending.
+- Return VALID JSON only.
+- Use double quotes only.
+- Do not use markdown.
+- Do not explain.
+
+Return format:
+{{
+  "reason_counts": [
+    {{
+      "reason": "one sentence reason",
+      "count": 0
+    }}
+  ]
+}}
+
+Complaint summary notes:
+{summary_notes_concat}
+"""
+    return prompt
 
 
-def update_product(row):
-    text = str(row['summary_note']).lower()
-    
-    for category, product, pattern in compiled_mapping:
-        if pattern.search(text):
-            return pd.Series([category, product])
-    
-    # no match → keep original
-    return pd.Series([row['product_category'], row['product']])
+def run_batches(df, apigee_access_token, model, sleep_seconds=2):
+    batch_results = []
 
+    for start in range(0, len(df), BATCH_SIZE):
+        end = min(start + BATCH_SIZE, len(df))
+        batch_df = df.iloc[start:end].copy()
 
-df[['product_category', 'product']] = df.apply(update_product, axis=1)
+        print(f"Running batch rows {start} to {end - 1}")
+
+        prompt = build_batch_prompt(batch_df)
+
+        response_text = generate_response_gemini(
+            apigee_access_token,
+            model,
+            prompt
+        )
+
+        try:
+            response_json = clean_llm_json(response_text)
+            reason_counts = response_json["reason_counts"]
+
+            batch_results.append({
+                "batch_start": start,
+                "batch_end": end - 1,
+                "reason_counts": reason_counts,
+                "raw_response": response_text
+            })
+
+        except Exception as e:
+            print(f"Failed to parse batch {start}-{end - 1}")
+            print(e)
+            print(response_text[:2000])
+
+            batch_results.append({
+                "batch_start": start,
+                "batch_end": end - 1,
+                "reason_counts": None,
+                "raw_response": response_text,
+                "error": str(e)
+            })
+
+        time.sleep(sleep_seconds)
+
+    return batch_results
