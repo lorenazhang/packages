@@ -1,1 +1,52 @@
+# recursively combine df_batch_reasons in smaller chunks
 
+current_df = df_batch_reasons.copy()
+
+while len(current_df) > 100:
+
+    combined_results = []
+
+    for start in range(0, len(current_df), 100):
+
+        chunk_df = current_df.iloc[start:start+100]
+
+        combine_prompt = build_combine_prompt(chunk_df)
+
+        response_text = generate_response_gemini(
+            apigee_access_token,
+            model,
+            combine_prompt
+        )
+
+        response_clean = (
+            response_text
+            .replace("```json", "")
+            .replace("```", "")
+            .strip()
+        )
+
+        response_json = json.loads(response_clean)
+
+        combined_chunk_df = pd.DataFrame(
+            response_json["reason_counts"]
+        )
+
+        combined_results.append(combined_chunk_df)
+
+    current_df = pd.concat(combined_results, ignore_index=True)
+
+    # exact duplicate collapse before next round
+    current_df = (
+        current_df
+        .groupby("Reason", as_index=False)["Count"]
+        .sum()
+    )
+
+# final combine
+combine_prompt = build_combine_prompt(current_df)
+
+final_response_text = generate_response_gemini(
+    apigee_access_token,
+    model,
+    combine_prompt
+)
