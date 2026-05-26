@@ -5,22 +5,30 @@ description: Run Python code using the miniforge_env conda environment.
 
 # Run Python code with miniforge_env
 
-When the user asks to run Python code, always use this environment:
+Always use ONLY this Python executable:
 
-```bash
-conda run -n miniforge_env python <file.py>
+```powershell
+& "C:\Users\u781896\AppData\Local\miniforge3_wf\envs\miniforge_env\python.exe"
 ```
+
+NEVER use system Python.
+NEVER use plain `python`.
+NEVER fall back to system Python.
 
 Steps:
 
-1. Save the Python code into a temporary `.py` file.
+1. First verify Python executable:
 
-2. Run it with:
-
-```bash
-conda run -n miniforge_env python <file.py>
+```powershell
+& "C:\Users\u781896\AppData\Local\miniforge3_wf\envs\miniforge_env\python.exe" -c "import sys; print(sys.executable)"
 ```
 
-3. Return the stdout and stderr to the user.
+2. Then run the file:
 
-4. Do not use the system Python interpreter.
+```powershell
+& "C:\Users\u781896\AppData\Local\miniforge3_wf\envs\miniforge_env\python.exe" <file.py>
+```
+
+3. Return the Python executable path, stdout, and stderr.
+
+4. If this exact Python executable path does not work, stop and report the error. Do not use any other Python.
