@@ -1,1 +1,3 @@
 =MID(CELL("filename",A1),FIND("]",CELL("filename",A1))+1,255)
+
+=MID(MID(CELL("filename",A1),FIND("]",CELL("filename",A1))+1,255),FIND("_",MID(CELL("filename",A1),FIND("]",CELL("filename",A1))+1,255))+1,255)
