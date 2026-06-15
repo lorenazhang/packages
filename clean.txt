@@ -1,3 +1,24 @@
-=MID(CELL("filename",A1),FIND("]",CELL("filename",A1))+1,255)
+QA Validation
 
-=MID(MID(CELL("filename",A1),FIND("]",CELL("filename",A1))+1,255),FIND("_",MID(CELL("filename",A1),FIND("]",CELL("filename",A1))+1,255))+1,255)
+1. Developed non-modeling logic for Q5 (WF Received Date) and improved data quality validation processes.
+2. Built and validated classification models for Q3 (Complainant Type), Q15 (Misconduct), and Q22 (Resolution Type).
+3. Completed production implementation and deployment for all supported QA validation questions.
+4. Incorporated SME feedback to enhance model performance and improve alignment with business requirements.
+5. Redesigned non-modeling logic for Q5, Q6, Q8, and Q9 to support the QAV redesign initiative and improve maintainability.
+
+⸻
+
+Emerging Observations (EO)
+
+1. Obtained and analyzed call transcript and call driver datasets to better understand customer contact drivers and their relationship to complaints.
+2. Reviewed current emerging trends and historical EO cases to identify recurring patterns and potential leading indicators.
+3. Developed and evaluated call-to-complaint conversion rate metrics to identify potential systematic customer experience issues.
+4. Leveraged LLM capabilities to generate insights and summarize key drivers behind both escalated and service complaint trends.
+5. Created executive-level analysis and presentations demonstrating the predictive value of conversion rate as an early warning signal for emerging complaint trends.
+
+
+
+Professional Development / Other
+
+1. Completed GCP training in preparation for the Google Cloud Professional Data Practitioner certification.
+2. Learned and applied GitHub Copilot Skills and GenAI capabilities to improve development efficiency and support analytics initiatives.
