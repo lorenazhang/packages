@@ -23,3 +23,24 @@ rm -rf /workspace2/cdar/users/u781896/conda_envs/test_env
 
 /workspace2/cdar/users/u781896/conda_envs/test_env/bin/python --version
 /workspace2/cdar/users/u781896/conda_envs/test_env/bin/python -m ipykernel_launcher
+
+
+
+python - <<'EOF'
+import json
+
+path = "/home/u781896/.local/share/jupyter/kernels/test_env/kernel.json"
+
+with open(path) as f:
+    data = json.load(f)
+
+data["env"] = {
+    "PYTHONPATH": "",
+    "PYTHONHOME": ""
+}
+
+with open(path, "w") as f:
+    json.dump(data, f, indent=2)
+
+print("updated")
+EOF
