@@ -10,3 +10,9 @@ dependencies:
   - pip:
       - sentence-transformers
       - tqdm
+
+
+
+/usr/software/miniforgeconda/py312-241132/bin/conda env create \
+  -f environment.yml \
+  -p /workspace2/cdar/users/u781896/conda_envs/test_env
