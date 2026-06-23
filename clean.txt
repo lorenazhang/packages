@@ -1,3 +1,26 @@
+I created a conda env at:
+/workspace2/cdar/users/u781896/conda_envs/test_env
+
+The env Python works from terminal:
+/workspace2/cdar/users/u781896/conda_envs/test_env/bin/python -c "print('hello')"
+
+The kernel spec is registered under:
+~/.local/share/jupyter/kernels/test_env/kernel.json
+
+kernel.json points to:
+/workspace2/cdar/users/u781896/conda_envs/test_env/bin/python
+
+I also cleared PYTHONPATH/PYTHONHOME in kernel.json.
+
+However, in JupyterHub, selecting Python (test_env) stays Connecting and eventually becomes No Kernel.
+
+
+
+
+
+
+
+
 /workspace2/cdar/users/u781896/conda_envs/test_env/bin/python -m ipykernel install --user --name test_env --display-name "Python (test_env)"
 
 
