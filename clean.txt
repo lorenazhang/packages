@@ -1,5 +1,6 @@
 . /usr/software/miniforgeconda/py312-241132/etc/profile.d/conda.sh
 conda activate /workspace2/cdar/users/u781896/conda_envs/test_env
+/workspace2/cdar/users/u781896/conda_envs/test_env/bin/python -c "print('hello')"
 
 
 ls -ld /workspace2/cdar/users/u781896/conda_envs/test_env
