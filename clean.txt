@@ -44,3 +44,6 @@ with open(path, "w") as f:
 
 print("updated")
 EOF
+
+
+cat ~/.local/share/jupyter/kernels/test_env/kernel.json
