@@ -1,3 +1,9 @@
+ls -ld /workspace2/cdar/users/u781896/conda_envs/test_env
+ls -ld /workspace2/cdar/users/u781896/conda_envs/test_env/bin/python
+
+
+-----------------
+
 dependencies:
   - python=3.12
   - pandas
