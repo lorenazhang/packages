@@ -18,3 +18,8 @@ dependencies:
   -p /workspace2/cdar/users/u781896/conda_envs/test_env
 
 rm -rf /workspace2/cdar/users/u781896/conda_envs/test_env
+
+
+
+/workspace2/cdar/users/u781896/conda_envs/test_env/bin/python --version
+/workspace2/cdar/users/u781896/conda_envs/test_env/bin/python -m ipykernel_launcher
