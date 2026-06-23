@@ -1,3 +1,9 @@
+unset PYTHONPATH
+source /usr/software/miniforgeconda/py312-241132/etc/profile.d/conda.sh
+conda activate /workspace2/cdar/users/u781896/conda_envs/test_env
+which python
+
+
 ls -ld /workspace2/cdar/users/u781896/conda_envs/test_env
 ls -ld /workspace2/cdar/users/u781896/conda_envs/test_env/bin/python
 
