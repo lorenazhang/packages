@@ -6,44 +6,27 @@ WITH call_data AS
         primary_lob,
         sublob,
         calldriver1,
-        CAST(interactiondatetime AS DATE) AS interaction_dt,
+        interactiondatetime,
 
         /* YYYYMM */
-        CAST(EXTRACT(YEAR FROM CAST(interactiondatetime AS DATE)) AS CHAR(4))
-        || 
-        CASE 
-            WHEN EXTRACT(MONTH FROM CAST(interactiondatetime AS DATE)) < 10 
-            THEN '0' || CAST(EXTRACT(MONTH FROM CAST(interactiondatetime AS DATE)) AS CHAR(1))
-            ELSE CAST(EXTRACT(MONTH FROM CAST(interactiondatetime AS DATE)) AS CHAR(2))
-        END AS month_id,
+        SUBSTR(interactiondatetime, 1, 4)
+        || SUBSTR(interactiondatetime, 6, 2) AS month_id,
 
         /* YYYYMMDD */
-        CAST(EXTRACT(YEAR FROM CAST(interactiondatetime AS DATE)) AS CHAR(4))
-        ||
-        CASE 
-            WHEN EXTRACT(MONTH FROM CAST(interactiondatetime AS DATE)) < 10 
-            THEN '0' || CAST(EXTRACT(MONTH FROM CAST(interactiondatetime AS DATE)) AS CHAR(1))
-            ELSE CAST(EXTRACT(MONTH FROM CAST(interactiondatetime AS DATE)) AS CHAR(2))
-        END
-        ||
-        CASE 
-            WHEN EXTRACT(DAY FROM CAST(interactiondatetime AS DATE)) < 10 
-            THEN '0' || CAST(EXTRACT(DAY FROM CAST(interactiondatetime AS DATE)) AS CHAR(1))
-            ELSE CAST(EXTRACT(DAY FROM CAST(interactiondatetime AS DATE)) AS CHAR(2))
-        END AS day_id,
+        SUBSTR(interactiondatetime, 1, 4)
+        || SUBSTR(interactiondatetime, 6, 2)
+        || SUBSTR(interactiondatetime, 9, 2) AS day_id,
 
         /* Monday week start */
-        CAST(interactiondatetime AS DATE)
-          - ((CAST(interactiondatetime AS DATE) - DATE '1900-01-01') MOD 7) AS week_start
+        CAST(SUBSTR(interactiondatetime, 1, 10) AS DATE FORMAT 'YYYY-MM-DD')
+          - ((CAST(SUBSTR(interactiondatetime, 1, 10) AS DATE FORMAT 'YYYY-MM-DD') - DATE '1900-01-01') MOD 7) AS week_start
 
     FROM EIW_U_CEDA_VOCAL_V1.AMP_CALLDRIVERS2_0
     WHERE model_lang = 'English'
       AND calldriver1 NOT IN ('No Conversation', 'No Reason Disclosed')
       AND connid IS NOT NULL
-
-      /* past 13 months */
-      AND CAST(interactiondatetime AS DATE) >= ADD_MONTHS(CURRENT_DATE, -13)
-      AND CAST(interactiondatetime AS DATE) < CURRENT_DATE
+      AND interactiondatetime >= '2026-03-15'
+      AND interactiondatetime <  '2026-06-01'
 ),
 
 comp_data AS
@@ -58,10 +41,8 @@ comp_data AS
 
     FROM EIW_I_CEDA_S1.COMPLAINTS_ECMP_REGISTRY_DLY_CS
     WHERE conn_id IS NOT NULL
-
-      /* complaint received date range */
-      AND CAST(wf_recd_dt AS DATE) >= ADD_MONTHS(CURRENT_DATE, -13)
-      AND CAST(wf_recd_dt AS DATE) < CURRENT_DATE
+      AND wf_recd_dt >= DATE '2026-03-15'
+      AND wf_recd_dt <  DATE '2026-06-01'
 )
 
 SELECT
@@ -73,10 +54,7 @@ SELECT
 
     COUNT(*) AS call_count,
 
-    SUM(CASE 
-            WHEN p.case_nr IS NOT NULL THEN 1 
-            ELSE 0 
-        END) AS complaint_count,
+    SUM(CASE WHEN p.case_nr IS NOT NULL THEN 1 ELSE 0 END) AS complaint_count,
 
     SUM(CASE 
             WHEN p.complaint_type_desc = 'Service Complaint' THEN 1 
@@ -84,29 +62,20 @@ SELECT
         END) AS service_complaint_count,
 
     SUM(CASE 
-            WHEN p.complaint_type_desc IN 
-                 ('LOB Escalated Complaint', 'EO Escalated Complaint') THEN 1 
+            WHEN p.complaint_type_desc IN ('LOB Escalated Complaint', 'EO Escalated Complaint') THEN 1 
             ELSE 0 
         END) AS escalated_complaint_count,
 
-    /* conversion rates */
-    CAST(SUM(CASE 
-                WHEN p.case_nr IS NOT NULL THEN 1 
-                ELSE 0 
-             END) AS DECIMAL(18,6)) 
+    CAST(SUM(CASE WHEN p.case_nr IS NOT NULL THEN 1 ELSE 0 END) AS DECIMAL(18,6))
         / NULLIFZERO(COUNT(*)) AS complaint_conversion_rate,
 
-    CAST(SUM(CASE 
-                WHEN p.complaint_type_desc = 'Service Complaint' THEN 1 
-                ELSE 0 
-             END) AS DECIMAL(18,6)) 
+    CAST(SUM(CASE WHEN p.complaint_type_desc = 'Service Complaint' THEN 1 ELSE 0 END) AS DECIMAL(18,6))
         / NULLIFZERO(COUNT(*)) AS service_conversion_rate,
 
     CAST(SUM(CASE 
-                WHEN p.complaint_type_desc IN 
-                     ('LOB Escalated Complaint', 'EO Escalated Complaint') THEN 1 
+                WHEN p.complaint_type_desc IN ('LOB Escalated Complaint', 'EO Escalated Complaint') THEN 1 
                 ELSE 0 
-             END) AS DECIMAL(18,6)) 
+             END) AS DECIMAL(18,6))
         / NULLIFZERO(COUNT(*)) AS escalated_conversion_rate,
 
     AVG(
