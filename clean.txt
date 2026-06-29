@@ -1,25 +1,12 @@
 WITH comp AS (
     SELECT
+        LOWER(TRIM(conn_id)) AS conn_id,
+
         case_nr,
         complaint_id,
         complaint_type_desc,
         wf_recd_dt,
         created_dt,
-        ecm_primary,
-        channel_id,
-        complaint_status,
-        created_by,
-        created_by_au,
-        complaint_type,
-        prim_cust_country,
-        interaction_uuid,
-        LOWER(TRIM(conn_id)) AS connid_join,
-        global_id,
-        lsid,
-        scenario,
-        channel_id AS complaint_channel_id,
-        business_area_cd,
-        medium,
         prim_complaint_category,
         prim_complaint_reason,
         product_category,
@@ -27,61 +14,68 @@ WITH comp AS (
         submitter_lob,
         submitter_sub_lob,
 
-        CASE WHEN complaint_type_desc = 'Service Complaint' THEN 1 ELSE 0 END AS service_flag,
-        CASE WHEN complaint_type_desc = 'Escalated Complaint' THEN 1 ELSE 0 END AS escalated_flag,
-        1 AS comp_flag
+        1 AS comp_flag,
+
+        CASE
+            WHEN complaint_type_desc = 'Service Complaint' THEN 1
+            ELSE 0
+        END AS service_flag,
+
+        CASE
+            WHEN complaint_type_desc = 'Escalated Complaint' THEN 1
+            ELSE 0
+        END AS escalated_flag
 
     FROM EIW_I_CEDA_S1.COMPLAINTS_ECMP_REGISTRY_DLY_CS
-    WHERE
-        (
-            wf_recd_dt >= DATE '2025-03-15'
-            AND wf_recd_dt < DATE '2025-06-01'
-        )
-        OR
-        (
-            wf_recd_dt >= DATE '2026-03-15'
-            AND wf_recd_dt < DATE '2026-06-01'
-        )
+    WHERE conn_id IS NOT NULL
+      AND (
+            (wf_recd_dt >= DATE '2025-03-15'
+             AND wf_recd_dt < DATE '2025-06-01')
+         OR (wf_recd_dt >= DATE '2026-03-15'
+             AND wf_recd_dt < DATE '2026-06-01')
+          )
 ),
 
 call_data AS (
     SELECT
-        *,
-        LOWER(TRIM(connid)) AS connid_join,
+        LOWER(TRIM(connid)) AS connid,
+        interactionid,
+        primary_lob,
+        sublob,
+        calldriver1,
+        interactiondatetime,
 
-        CAST(interactiondatetime AS DATE) AS interaction_date,
-
-        /* month: YYYYMM */
         TO_CHAR(CAST(interactiondatetime AS DATE), 'YYYYMM') AS month,
 
-        /* week start date, Monday-based */
         CAST(interactiondatetime AS DATE)
             - ((CAST(interactiondatetime AS DATE) - DATE '1900-01-01') MOD 7) AS week,
 
-        /* day: YYYYMMDD */
         TO_CHAR(CAST(interactiondatetime AS DATE), 'YYYYMMDD') AS day
 
     FROM EIW_U_CEDA_VOCAL_V1.AMP_CALLDRIVERS2_0
     WHERE model_lang = 'English'
       AND calldriver1 NOT IN ('No Conversation', 'No Reason Disclosed')
+      AND connid IS NOT NULL
       AND (
-            (
-                interactiondatetime >= TIMESTAMP '2025-03-15 00:00:00'
-                AND interactiondatetime < TIMESTAMP '2025-06-01 00:00:00'
-            )
-            OR
-            (
-                interactiondatetime >= TIMESTAMP '2026-03-15 00:00:00'
-                AND interactiondatetime < TIMESTAMP '2026-06-01 00:00:00'
-            )
+            (interactiondatetime >= TIMESTAMP '2025-03-15 00:00:00'
+             AND interactiondatetime < TIMESTAMP '2025-06-01 00:00:00')
+         OR (interactiondatetime >= TIMESTAMP '2026-03-15 00:00:00'
+             AND interactiondatetime < TIMESTAMP '2026-06-01 00:00:00')
           )
       AND calldriver1 IN ({target_driver_str})
-      AND connid IS NOT NULL
 ),
 
 merged AS (
     SELECT
-        c.*,
+        c.connid,
+        c.interactionid,
+        c.primary_lob,
+        c.sublob,
+        c.calldriver1,
+        c.interactiondatetime,
+        c.month,
+        c.week,
+        c.day,
 
         comp.case_nr,
         comp.complaint_id,
@@ -103,7 +97,7 @@ merged AS (
 
     FROM call_data c
     LEFT JOIN comp
-      ON c.connid_join = comp.connid_join
+      ON c.connid = comp.conn_id
 )
 
 SELECT
