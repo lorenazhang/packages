@@ -1,3 +1,14 @@
+SELECT interactiondatetime, COUNT(*) AS cnt
+FROM EIW_U_CEDA_VOCAL_V1.AMP_CALLDRIVERS2_0
+WHERE interactiondatetime >= '2025-05-15'
+  AND interactiondatetime <  '2026-03-15'
+  AND (
+       interactiondatetime IS NULL
+       OR SUBSTR(interactiondatetime,1,10) NOT LIKE '____-__-__'
+      )
+GROUP BY 1
+ORDER BY cnt DESC;
+
 WITH call_data AS
 (
     SELECT
