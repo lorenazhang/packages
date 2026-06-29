@@ -1,0 +1,35 @@
+SELECT
+    call.week,
+    call.calldriver1,
+    call.sublob,
+
+    COUNT(*) AS total_calls,
+
+    SUM(
+        CASE WHEN comp.case_nr IS NOT NULL THEN 1 ELSE 0 END
+    ) AS complaints,
+
+    AVG(
+        CASE WHEN comp.case_nr IS NOT NULL THEN 1 ELSE 0 END
+    ) AS complaint_conversion_rate,
+
+    AVG(
+        CASE WHEN comp.complaint_type_desc='Service Complaint'
+             THEN 1 ELSE 0 END
+    ) AS service_conversion_rate,
+
+    AVG(
+        CASE WHEN comp.complaint_type_desc IN
+            ('LOB Escalated Complaint','EO Escalated Complaint')
+             THEN 1 ELSE 0 END
+    ) AS escalated_conversion_rate
+
+FROM call_data call
+
+LEFT JOIN complaints comp
+ON LOWER(call.connid)=LOWER(comp.conn_id)
+
+GROUP BY
+    call.week,
+    call.calldriver1,
+    call.sublob;
