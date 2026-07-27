@@ -1,14 +1,1 @@
 
-SELECT
-    COUNT(*) AS total_cnt,
-
-    SUM(CASE WHEN cust_type_ind IS NULL THEN 1 ELSE 0 END) AS null_cnt,
-    100.0 * SUM(CASE WHEN cust_type_ind IS NULL THEN 1 ELSE 0 END) / COUNT(*) AS null_pct,
-
-    SUM(CASE WHEN cust_type_ind IN ('0', 'PERSON') THEN 1 ELSE 0 END) AS person_cnt,
-    100.0 * SUM(CASE WHEN cust_type_ind IN ('0', 'PERSON') THEN 1 ELSE 0 END) / COUNT(*) AS person_pct,
-
-    SUM(CASE WHEN cust_type_ind IN ('2', 'COMPANY') THEN 1 ELSE 0 END) AS company_cnt,
-    100.0 * SUM(CASE WHEN cust_type_ind IN ('2', 'COMPANY') THEN 1 ELSE 0 END) / COUNT(*) AS company_pct
-
-FROM dbo.your_table;
