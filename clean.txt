@@ -1,1 +1,84 @@
 
+
+def load_map_volatile(conn, df_map):
+    table_name = "vt_map"
+
+    columns = [
+        "division_name",
+        "consolidation_name",
+        "workforcetype_name",
+        "virtual_queue_name",
+        "calendardate",
+        "lob_name",
+        "lob_short_name"
+    ]
+
+    # Confirm all required columns exist
+    missing_cols = [col for col in columns if col not in df_map.columns]
+    if missing_cols:
+        raise ValueError(f"Missing columns in df_map: {missing_cols}")
+
+    cur = conn.cursor()
+
+    try:
+        cur.execute(f"DROP TABLE {table_name}")
+    except Exception:
+        pass
+
+    try:
+        cur.execute(f"""
+            CREATE VOLATILE TABLE {table_name}
+            (
+                division_name       VARCHAR(255),
+                consolidation_name  VARCHAR(255),
+                workforcetype_name  VARCHAR(255),
+                virtual_queue_name  VARCHAR(500),
+                calendardate        DATE,
+                lob_name            VARCHAR(255),
+                lob_short_name      VARCHAR(100)
+            )
+            ON COMMIT PRESERVE ROWS
+        """)
+
+        df_insert = df_map[columns].copy()
+
+        # Convert calendardate to Python date
+        df_insert["calendardate"] = (
+            pd.to_datetime(df_insert["calendardate"], errors="coerce")
+            .dt.date
+        )
+
+        # Replace pandas NaN/NaT with None so Teradata receives SQL NULL
+        df_insert = df_insert.astype(object).where(
+            pd.notnull(df_insert),
+            None
+        )
+
+        rows = list(df_insert.itertuples(index=False, name=None))
+
+        insert_sql = f"""
+            INSERT INTO {table_name}
+            (
+                division_name,
+                consolidation_name,
+                workforcetype_name,
+                virtual_queue_name,
+                calendardate,
+                lob_name,
+                lob_short_name
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """
+
+        if rows:
+            cur.executemany(insert_sql, rows)
+
+        print(
+            f"INFO: {len(rows):,} mapping records loaded "
+            f"into volatile table {table_name}."
+        )
+
+    except Exception as err:
+        print(f"ERROR: {err}")
+        print("ERROR: Failed to load df_map into the volatile table.")
+        raise
