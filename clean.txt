@@ -1,4 +1,25 @@
-df1['vq_key'] = df1['virtual_queue'].str.replace(r'_vq$', '', regex=True)
-df2['vq_key'] = df2['virtual_queue'].str.replace(r'_vq$', '', regex=True)
+# Ensure date column is datetime
 
-df = df1.merge(df2, on='vq_key', how='left', suffixes=('_df1', '_df2'))
+df['week_start_call'] = pd.to_datetime(df['week_start_call'])
+
+# Create month column
+
+df['month'] = df['week_start_call'].dt.to_period('M')
+
+# Calculate null rate by month
+
+null_rate = (
+
+    df.groupby('month')['division_name']
+
+      .apply(lambda x: x.isna().mean())
+
+      .reset_index(name='null_rate')
+
+)
+
+# Convert month back to string if desired
+
+null_rate['month'] = null_rate['month'].astype(str)
+
+print(null_rate)
