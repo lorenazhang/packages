@@ -1,9 +1,1 @@
 
-
-We have a few follow up questions.
-
-1. I noticed that many VQs in the call driver table don’t exist in the mapping table. At the unique VQ level, the unmatched rate is high, but at the record level, only about 15% of call records are unmapped (the unmapped VQs seem to be very low volume). I also checked the past year’s data, and the unmatched rate has been consistently around 15–17% each month. Is this expected? Are there certain types of VQs that are intentionally excluded from the mapping table?
-2. Both the call driver table and the mapping table contain a mix of VQ names with and without the _VQ suffix (case-insensitive). I removed the trailing _VQ from both datasets before joining. Is that the correct approach?
-3. It looks like the mapping is many VQs → one business LOB/SubLOB. Is that the expected relationship?
-
-Thanks!
