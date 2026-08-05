@@ -1,18 +1,1 @@
 
-# Normalize mapping table
-map_vq = (
-    df_map['virtual_queue']
-    .fillna('')
-    .str.lower()
-    .str.replace(r'_vq$', '', regex=True)
-)
-
-matches = {}
-
-for vq in suspect_vq:
-    key = vq.lower()
-    hit = df_map.loc[map_vq.str.contains(key, regex=False), 'virtual_queue'].tolist()
-    if hit:
-        matches[vq] = hit
-
-print(f"{len(matches)} out of {len(suspect_vq)} suspect VQs found.")
