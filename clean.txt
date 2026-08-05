@@ -1,25 +1,9 @@
-# Unique queue coverage
-unique_match_rate = (
-    df['vq_call'].dropna().isin(df_map['vq_map'].dropna()).mean()
-)
-
-# Row-level coverage
-row_match_rate = df_merge['lob_name'].notna().mean()
-
-print(f"Unique VQ match rate: {unique_match_rate:.2%}")
-print(f"Row-level match rate: {row_match_rate:.2%}")
 
 
-vq_counts = (
-    df.groupby('vq_call')
-      .size()
-      .reset_index(name='record_count')
-)
+We have a few follow up questions.
 
-vq_counts['is_mapped'] = vq_counts['vq_call'].isin(df_map['vq_map'])
+1. I noticed that many VQs in the call driver table don’t exist in the mapping table. At the unique VQ level, the unmatched rate is high, but at the record level, only about 15% of call records are unmapped (the unmapped VQs seem to be very low volume). I also checked the past year’s data, and the unmatched rate has been consistently around 15–17% each month. Is this expected? Are there certain types of VQs that are intentionally excluded from the mapping table?
+2. Both the call driver table and the mapping table contain a mix of VQ names with and without the _VQ suffix (case-insensitive). I removed the trailing _VQ from both datasets before joining. Is that the correct approach?
+3. It looks like the mapping is many VQs → one business LOB/SubLOB. Is that the expected relationship?
 
-vq_counts.groupby('is_mapped').agg(
-    unique_vq_count=('vq_call', 'nunique'),
-    total_records=('record_count', 'sum'),
-    median_records_per_vq=('record_count', 'median')
-)
+Thanks!
