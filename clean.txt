@@ -1,1 +1,9 @@
+import re
 
+path = f'{model_folder}/misconduct_models.pkl'
+
+with open(path, 'rb') as f:
+    data = f.read()
+
+for m in re.finditer(b'_sklearn_version', data):
+    print(data[m.start():m.start()+100])
