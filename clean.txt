@@ -1,7 +1,5 @@
-/path/to/other/python3 -m pip install ipykernel
+none_summary = pd.DataFrame({
+    'none_count': [df[col].apply(lambda x: x is None).sum() for col in check_cols]
+}, index=check_cols)
 
-
-
-/path/to/other/python3 -m ipykernel install --user \
-    --name my_new_env \
-    --display-name "Python (my_new_env)"
+none_summary
