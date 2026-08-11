@@ -1,1 +1,7 @@
+/path/to/other/python3 -m pip install ipykernel
 
+
+
+/path/to/other/python3 -m ipykernel install --user \
+    --name my_new_env \
+    --display-name "Python (my_new_env)"
