@@ -1,5 +1,12 @@
-none_summary = pd.DataFrame({
-    'none_count': [df[col].apply(lambda x: x is None).sum() for col in check_cols]
-}, index=check_cols)
+import importlib.util
 
-none_summary
+path = "/your/path/q3_complaint_classification_old.py"
+
+spec = importlib.util.spec_from_file_location("q3_old", path)
+q3_old = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(q3_old)
+
+q3_result = q3_old.run_q3(
+    unified_df=df.copy(),
+    embeddings_df=embeddings_df
+)
