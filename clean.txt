@@ -1,19 +1,1 @@
-rename_map = {
-    "ecmp_case_nr": "ECMP_CASE_NR",
-    "q10_ecmp_summary_note": "Q10_ECMP_SUMMARY_NOTE",
-    "q3_ecmp_complainant_name": "Q3_ECMP_COMPLAINANT_NAME",
-    "ecmp_complainant_type": "ECMP_COMPLAINANT_TYPE",
-    "q2_ecmp_ecn": "Q2_ECMP_ECN",
-    "q2_sor_ecn": "Q2_SOR_ECN",
-    "q7_ecmp_acct_num": "Q7_ECMP_ACCT_NUM",
-    "names_concat": "names_concat",
-    "ecmp_customer_name": "ECMP_Customer_Name",
-    "cust_type_ind": "cust_type_ind",
-    "ecmp_irr": "ECMP_irr",
-    "sor_customer_name": "sor_customer_name",
-    "business_name": "business_name",
-    "summary_embedding": "SUMMARY_EMBEDDING",
-    "portal_complainant_type": "Portal_COMPLAINANT_TYPE",
-}
 
-df = df.rename(columns=rename_map)
