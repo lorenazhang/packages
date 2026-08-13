@@ -1,1 +1,37 @@
+from sklearn.metrics import precision_score, recall_score
 
+y_true = df["ecmp_misconduct"]
+
+# Keyword
+kw_precision = precision_score(
+    y_true,
+    df["sor_misconduct"],
+    pos_label="yes"
+)
+
+kw_recall = recall_score(
+    y_true,
+    df["sor_misconduct"],
+    pos_label="yes"
+)
+
+# Model
+model_precision = precision_score(
+    y_true,
+    df["misconduct_pred"],
+    pos_label="yes"
+)
+
+model_recall = recall_score(
+    y_true,
+    df["misconduct_pred"],
+    pos_label="yes"
+)
+
+print("Keyword:")
+print("Precision:", kw_precision)
+print("Recall:", kw_recall)
+
+print("\nModel:")
+print("Precision:", model_precision)
+print("Recall:", model_recall)
