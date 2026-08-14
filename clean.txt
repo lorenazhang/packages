@@ -1,1 +1,25 @@
 
+import numpy as np
+import pandas as pd
+
+def calculate_slope(row):
+    rates = np.asarray(row['recent_6wk_rates'], dtype=float)
+    dates = pd.to_datetime(row['recent_6wk_dates'])
+
+    if len(rates) < 4:
+        return np.nan
+
+    
+    x = ((dates - dates.min()).days / 7).to_numpy()
+
+    return np.polyfit(x, rates, 1)[0]
+
+
+recent_6wk['recent_6wk_slope'] = recent_6wk.apply(
+    calculate_slope,
+    axis=1
+)
+
+recent_6wk['recent_6wk_slope_pct_point'] = (
+    recent_6wk['recent_6wk_slope'] * 100
+)
