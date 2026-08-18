@@ -1,6 +1,7 @@
-SELECT ColumnName
+SELECT
+    DatabaseName,
+    TableName,
+    ColumnName
 FROM DBC.ColumnsV
-WHERE DatabaseName = 'your_schema'
-  AND TableName = 'your_table'
-  AND UPPER(ColumnName) LIKE '%ABC%'
-ORDER BY ColumnId;
+WHERE UPPER(ColumnName) = 'LOB_ABOUT_PRODUCT'
+ORDER BY DatabaseName, TableName;
