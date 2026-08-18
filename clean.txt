@@ -1,5 +1,6 @@
-SELECT COLUMN_NAME
-FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_SCHEMA = 'your_schema'
-  AND TABLE_NAME = 'your_table'
-  AND COLUMN_NAME LIKE '%abc%';
+SELECT ColumnName
+FROM DBC.ColumnsV
+WHERE DatabaseName = 'your_schema'
+  AND TableName = 'your_table'
+  AND UPPER(ColumnName) LIKE '%ABC%'
+ORDER BY ColumnId;
