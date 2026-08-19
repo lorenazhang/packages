@@ -1,7 +1,1 @@
-SELECT
-    DatabaseName,
-    TableName,
-    ColumnName
-FROM DBC.ColumnsV
-WHERE UPPER(ColumnName) = 'LOB_ABOUT_PRODUCT'
-ORDER BY DatabaseName, TableName;
+
