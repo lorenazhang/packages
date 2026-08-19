@@ -1,1 +1,10 @@
-
+SELECT DISTINCT
+    a.DatabaseName,
+    a.TableName
+FROM DBC.ColumnsV a
+JOIN DBC.ColumnsV b
+  ON a.DatabaseName = b.DatabaseName
+ AND a.TableName = b.TableName
+WHERE UPPER(a.ColumnName) = 'LOB_ABOUT_PRODUCT'
+  AND UPPER(b.ColumnName) LIKE '%CONN%'
+ORDER BY a.DatabaseName, a.TableName;
