@@ -1,19 +1,1 @@
-prompt = f"""
-Below is a collection of social media messages related to Wells Fargo, each message is separated by a new line. 
-Your task is to identify the major customer issue topics discussed in these messages.
 
-For each topic:
-1. Provide a concise topic name and a short description of the issue.
-2. Provide 2-3 representative examples or short summaries of the messages.
-
-
-Focus on issues related to Wells Fargo products, services, customer experiences, processes, or operational problems.
-
-Exclude:
-- General news that does not describe a customer issue
-- Stock/investment discussion about Wells Fargo
-- Marketing or promotional content
-- Job postings
-- Spam or unrelated content
-
-"""
