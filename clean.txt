@@ -1,10 +1,9 @@
-SELECT DISTINCT
-    a.DatabaseName,
-    a.TableName
-FROM DBC.ColumnsV a
-JOIN DBC.ColumnsV b
-  ON a.DatabaseName = b.DatabaseName
- AND a.TableName = b.TableName
-WHERE UPPER(a.ColumnName) = 'LOB_ABOUT_PRODUCT'
-  AND UPPER(b.ColumnName) LIKE '%CONN%'
-ORDER BY a.DatabaseName, a.TableName;
+df['createdtime'] = pd.to_datetime(df['createdtime'])
+
+df['week'] = df['createdtime'].dt.to_period('W').apply(lambda x: x.start_time)
+
+weekly = (
+    df.groupby(['week', 'social_network'])
+      .size()
+      .reset_index(name='post_count')
+)
