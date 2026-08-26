@@ -1,1 +1,11 @@
 
+df_monthly_message = (
+    df_2026
+    .dropna(subset=['message'])
+    .groupby(['social_network', 'month'])
+    .agg(
+        combined_message=('message', lambda x: '\n'.join(x.astype(str))),
+        message_count=('message', 'size')
+    )
+    .reset_index()
+)
