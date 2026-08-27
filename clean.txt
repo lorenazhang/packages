@@ -1,1 +1,11 @@
+I did some initial analysis on the Sprinklr social media data and here are a few initial findings:
+
+* Data volume appears relatively stable over time across the major social media platforms
+* Sprinklr provides several fields that can help narrow down the data, such as message category (e.g., Complaint), sentiment, and priority. 
+* There is still a significant amount of noise at the message level, even after filtering to messages classified as complaints. Many messages are unrelated, lack sufficient context, or do not clearly describe a customer issue.
+* Another limitation is that Sprinklr does not have a consistent topic field similar to Call Driver that can be used to categorize every message. Because of this, we cannot directly track the volume or trend of a specific customer issue over time using the existing fields.
+* However, there does appear to be useful customer-issue information within the messages. As an initial test, I passed a subset of August Facebook complaint messages to an LLM, and it was able to identify some meaningful themes such as customer service/support issues, fraud and security resolution, account access, digital banking issues, and fees/billing.
+
+Based on this initial review, I think the data is usable as a supplementary signal, but likely not as a standalone signal.
+
 
