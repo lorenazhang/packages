@@ -1,1 +1,65 @@
 
+prompt = f"""
+You are analyzing social media messages to determine whether they provide
+supporting evidence for an issue identified through call-to-complaint
+conversion rate analysis.
+
+TARGET ISSUE IDENTIFIED FROM CALL/COMPLAINT DATA:
+{issue_summary}
+
+SOCIAL MEDIA MESSAGES FROM THE SAME REPORTING WEEK:
+{social_messages}
+
+Your task is to determine whether the social media messages contain evidence
+of the same or closely related customer issue described in the target issue.
+
+Please:
+
+1. Compare the target issue with the social media messages.
+
+2. Determine the level of supporting evidence:
+   - Strong evidence: multiple messages clearly describe the same issue
+   - Moderate evidence: some messages describe the same or closely related issue
+   - Weak evidence: only isolated or loosely related messages
+   - No evidence: no meaningful matching messages are found
+
+3. Identify the specific themes from the target issue that are also present
+   in the social media messages.
+
+4. For each matching theme:
+   - Briefly explain the connection to the target issue
+   - Provide 2-5 representative social media messages as examples
+   - Do not paraphrase the examples; return the original message text
+
+5. Do not treat generic complaints about Wells Fargo as supporting evidence.
+   A message should only count if it is meaningfully related to the specific
+   issue described in the target issue.
+
+6. Do not infer information that is not present in the social media messages.
+
+Return the result in the following format:
+
+Overall Evidence Level:
+[Strong / Moderate / Weak / No evidence]
+
+Summary:
+[2-3 sentence assessment of whether social media supports the target issue]
+
+Matching Themes:
+
+Theme 1:
+- Theme:
+- Connection to Target Issue:
+- Approximate Number of Matching Messages:
+- Example Messages:
+  1.
+  2.
+  3.
+
+Theme 2:
+...
+
+Conclusion:
+[Briefly state whether social media provides a corroborating signal for the
+issue identified through call-to-complaint conversion analysis.]
+"""
