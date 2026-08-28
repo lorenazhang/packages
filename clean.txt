@@ -1,1 +1,9 @@
+The baseline conversion rate table contains 13 months of historical weekly data, aggregated by Call Driver, Business LOB, and Sub-LOB. Call records are first mapped to the appropriate business LOB/Sub-LOB using Virtual Queue mapping, then aggregated at the weekly level.
 
+A call is considered converted to a complaint when the call can be linked to a complaint record through conn_id.
+
+Conversion Rate is calculated as:
+
+Conversion Rate = Number of Calls Converted to Complaints / Total Number of Calls
+
+For example, if a Call Driver × LOB × Sub-LOB combination had 1,000 calls in a week and 50 of those calls resulted in complaints, the weekly conversion rate would be 5%.
