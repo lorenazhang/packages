@@ -1,1 +1,35 @@
+SELECT
+    lob_about_product,
+    prim_complaint_reason,
 
+    COUNT(DISTINCT case_nr) AS complaint_count,
+
+    COUNT(DISTINCT CASE
+        WHEN recontact_ind = 1 THEN case_nr
+    END) AS recontact_complaint_count,
+
+    COUNT(DISTINCT CASE
+        WHEN recontact_ind = 0 THEN case_nr
+    END) AS non_recontact_complaint_count,
+
+    COUNT(DISTINCT CASE
+        WHEN recontact_ind IS NULL THEN case_nr
+    END) AS null_recontact_ind_count,
+
+    CAST(
+        COUNT(DISTINCT CASE
+            WHEN recontact_ind = 1 THEN case_nr
+        END)
+        AS DECIMAL(18,4)
+    )
+    / NULLIFZERO(COUNT(DISTINCT case_nr))
+        AS recontact_rate
+
+FROM your_table
+
+GROUP BY
+    lob_about_product,
+    prim_complaint_reason
+
+ORDER BY
+    complaint_count DESC;
