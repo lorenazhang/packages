@@ -1,34 +1,29 @@
+num_of_months = 3
 
-num_of_month = 4
-
-def calculate_trend(group, num_of_month=4):
+def calculate_trend(group, num_of_months=3):
     
-    recent = (
-        group.sort_values('month')
-             .tail(num_of_month)
-    )
-
+    group = group.sort_values('month')
+    
+    # current month + previous N months
+    recent = group.tail(num_of_months + 1)
+    
     rates = recent['complaint_conversion_rate'].to_numpy(dtype=float)
 
-    if len(rates) < 3 or np.isnan(rates).any():
+    if len(rates) < num_of_months + 1 or np.isnan(rates).any():
         return pd.Series({
-            'slope': np.nan,
-            'positive_change_pct': np.nan
+            'continuous_uptrend': False,
+            'rate_change': np.nan
         })
 
-    # linear slope
-    x = np.arange(len(rates))
-    slope = np.polyfit(x, rates, 1)[0]
+    # every month must increase
+    continuous_uptrend = np.all(np.diff(rates) > 0)
 
-    # month-over-month changes
-    changes = np.diff(rates)
-
-    # % of changes that are positive
-    positive_change_pct = (changes > 0).mean()
+    # latest month - starting month
+    rate_change = rates[-1] - rates[0]
 
     return pd.Series({
-        'slope': slope,
-        'positive_change_pct': positive_change_pct
+        'continuous_uptrend': continuous_uptrend,
+        'rate_change': rate_change
     })
 
 
@@ -40,7 +35,7 @@ trend_df = (
     )
     .apply(
         calculate_trend,
-        num_of_month=num_of_month
+        num_of_months=num_of_months
     )
     .reset_index()
 )
