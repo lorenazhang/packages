@@ -1,5 +1,1 @@
-Thanks! I don’t currently have access to the VOC dashboard, so I’m not familiar with what the data looks like there. If possible, could you share a screenshot of the recontact view?
 
-For our use case, we would ideally like to work with the ConnID-level data, so we have the flexibility to aggregate and analyze recontacts by different dimensions and different time periods as needed for our signal detection analysis.
-
-We can also submit the ICC request as you suggested. Thanks!
