@@ -1,5 +1,1 @@
-Thanks for sharing the deck — this is very helpful.
 
-For our use case, we’re looking for a call-level recontact indicator that we can use to calculate the number of recontacts by call driver within a given time period. Ideally, we’d have something at the interaction/call level (e.g., conn_id) with an indicator showing whether that call resulted in a recontact based on the logic you described — similar to the recontact_ind available at the complaint level in COMPLAINTS_ENTERPRISE_DLY_CS, but at the call level.
-
-Do you already have a table or dataset that contains this call-level recontact indicator, along with the call/interaction identifier? If so, would you mind sharing the table name and relevant fields?
