@@ -1,1 +1,12 @@
-
+SELECT
+    DatabaseName,
+    TableName
+FROM DBC.ColumnsV
+WHERE LOWER(ColumnName) IN ('recontact_ind', 'conn_id')
+GROUP BY
+    DatabaseName,
+    TableName
+HAVING COUNT(DISTINCT LOWER(ColumnName)) = 2
+ORDER BY
+    DatabaseName,
+    TableName;
