@@ -1,1 +1,16 @@
-
+SELECT
+    DatabaseName,
+    TableName
+FROM DBC.ColumnsV
+WHERE LOWER(ColumnName) LIKE '%recontact%'
+   OR LOWER(ColumnName) LIKE '%conn%'
+GROUP BY
+    DatabaseName,
+    TableName
+HAVING
+    SUM(CASE WHEN LOWER(ColumnName) LIKE '%recontact%' THEN 1 ELSE 0 END) > 0
+    AND
+    SUM(CASE WHEN LOWER(ColumnName) LIKE '%conn%' THEN 1 ELSE 0 END) > 0
+ORDER BY
+    DatabaseName,
+    TableName;
