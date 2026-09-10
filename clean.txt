@@ -1,5 +1,4 @@
 SELECT
-    DatabaseName,
     TableName,
     MAX(CASE 
         WHEN LOWER(ColumnName) LIKE '%recontact%' 
@@ -16,12 +15,8 @@ WHERE DatabaseName = 'sbx_ceda_poc'
       LOWER(ColumnName) LIKE '%recontact%'
       OR LOWER(ColumnName) LIKE '%conn%'
   )
-GROUP BY
-    DatabaseName,
-    TableName
+GROUP BY TableName
 HAVING
     MAX(CASE WHEN LOWER(ColumnName) LIKE '%recontact%' THEN 1 ELSE 0 END) = 1
-    AND
-    MAX(CASE WHEN LOWER(ColumnName) LIKE '%conn%' THEN 1 ELSE 0 END) = 1
-ORDER BY
-    TableName;
+    AND MAX(CASE WHEN LOWER(ColumnName) LIKE '%conn%' THEN 1 ELSE 0 END) = 1
+ORDER BY TableName;
