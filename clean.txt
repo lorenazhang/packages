@@ -1,22 +1,5 @@
-SELECT
-    TableName,
-    MAX(CASE 
-        WHEN LOWER(ColumnName) LIKE '%recontact%' 
-        THEN ColumnName 
-    END) AS recontact_col,
-    MAX(CASE 
-        WHEN LOWER(ColumnName) LIKE '%conn%' 
-        THEN ColumnName 
-    END) AS conn_col
-FROM DBC.ColumnsV
-WHERE DatabaseName = 'sbx_ceda_poc'
-  AND LOWER(TableName) LIKE 'ccr%'
-  AND (
-      LOWER(ColumnName) LIKE '%recontact%'
-      OR LOWER(ColumnName) LIKE '%conn%'
-  )
-GROUP BY TableName
-HAVING
-    MAX(CASE WHEN LOWER(ColumnName) LIKE '%recontact%' THEN 1 ELSE 0 END) = 1
-    AND MAX(CASE WHEN LOWER(ColumnName) LIKE '%conn%' THEN 1 ELSE 0 END) = 1
-ORDER BY TableName;
+Following up on our conversation yesterday — I’ve completed all five trainings, completed the attestation, and submitted the AIMS access request.
+
+While I’m waiting for the request to be approved, could you please share the table name for the conn_id-level recontact data? The table you shared yesterday doesn’t appear to include recontact information, and I’d like to start some initial analysis in the meantime.
+
+Thanks for your help!
