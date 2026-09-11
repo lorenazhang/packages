@@ -1,134 +1,123 @@
-recontact_query = f"""
-SELECT DISTINCT
-    LOWER(TRIM(voc_id_parent)) AS connid
-FROM {recontact_table}
-WHERE voc_id_parent IS NOT NULL
-"""
+import pandas as pd
+import numpy as np
 
-df_recontact = pd.read_sql(recontact_query, conn_tdap2)
+# ============================================================
+# Target table
+# ============================================================
 
-print(df_recontact.shape)
-print(df_recontact.head())
+target_table = "cdar_cai_prd.eo_recontact_13m_baseline"
 
-#create volatile table in eiwp
-cursor = conn_eiwp.cursor()
 
-cursor.execute("""
-CREATE VOLATILE TABLE vt_recontact
+# ============================================================
+# Prepare dataframe
+# ============================================================
+
+df_load = df_final.copy()
+
+df_load['week_start_call'] = pd.to_datetime(
+    df_load['week_start_call']
+).dt.date
+
+df_load['call_count'] = df_load['call_count'].astype(int)
+df_load['recontact_count'] = df_load['recontact_count'].astype(int)
+df_load['recontact_rate'] = df_load['recontact_rate'].astype(float)
+
+# Replace NaN with None so Teradata inserts them as NULL
+df_load = df_load.replace({np.nan: None})
+
+
+# ============================================================
+# Create target table
+# ============================================================
+
+cursor = conn_tdap2.cursor()
+
+create_sql = f"""
+CREATE MULTISET TABLE {target_table}
 (
-    connid VARCHAR(100)
+    week_start_call DATE,
+    calldriver1 VARCHAR(200),
+    primary_lob VARCHAR(200),
+    sublob VARCHAR(300),
+    call_count INTEGER,
+    recontact_count INTEGER,
+    recontact_rate DECIMAL(18,6)
 )
-PRIMARY INDEX (connid)
-ON COMMIT PRESERVE ROWS
-""")
-
-insert_sql = """
-INSERT INTO vt_recontact (connid)
-VALUES (?)
+PRIMARY INDEX (
+    week_start_call,
+    calldriver1
+)
 """
 
-rows = [(x,) for x in df_recontact['connid'].dropna().unique()]
+cursor.execute(create_sql)
 
-batch_size = 10000
+print(f"Created table: {target_table}")
+
+
+# ============================================================
+# Insert data
+# ============================================================
+
+insert_sql = f"""
+INSERT INTO {target_table}
+(
+    week_start_call,
+    calldriver1,
+    primary_lob,
+    sublob,
+    call_count,
+    recontact_count,
+    recontact_rate
+)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+"""
+
+rows = list(
+    df_load[
+        [
+            'week_start_call',
+            'calldriver1',
+            'primary_lob',
+            'sublob',
+            'call_count',
+            'recontact_count',
+            'recontact_rate'
+        ]
+    ].itertuples(index=False, name=None)
+)
+
+batch_size = 5000
 
 for i in range(0, len(rows), batch_size):
+
+    batch = rows[i:i + batch_size]
+
     cursor.executemany(
         insert_sql,
-        rows[i:i + batch_size]
+        batch
     )
 
-print(f"Inserted {len(rows):,} unique recontact conn_ids")
+    print(
+        f"Loaded {min(i + batch_size, len(rows)):,} "
+        f"/ {len(rows):,}"
+    )
 
-#sanity check
-pd.read_sql(
-    "SELECT COUNT(*) AS cnt FROM vt_recontact",
-    conn_eiwp
-)
 
-QUALIFY ROW_NUMBER()
-OVER (
-    PARTITION BY LOWER(TRIM(connid))
-    ORDER BY interactiondatetime
-) = 1
-query = f"""
-WITH call_data AS
-(
-    SELECT
-        LOWER(TRIM(a.connid)) AS connid,
-        a.interactionid,
-        a.calldriver1,
-        a.aa_virtualqueue_bb_cct AS virtual_queue,
-        a.interactiondatetime,
+# ============================================================
+# Validate loaded table
+# ============================================================
 
-        CAST(SUBSTR(a.interactiondatetime, 1, 10)
-             AS DATE FORMAT 'YYYY-MM-DD')
-        -
-        (
-            (
-                CAST(SUBSTR(a.interactiondatetime, 1, 10)
-                     AS DATE FORMAT 'YYYY-MM-DD')
-                - DATE '1900-01-01'
-            ) MOD 7
-        ) AS week_start_call
-
-    FROM {call_table} a
-
-    WHERE a.model_lang = 'English'
-      AND a.calldriver1 NOT IN ('No Conversation', 'No Reason Disclosed')
-      AND a.connid IS NOT NULL
-      AND a.aa_virtualqueue_bb_cct IS NOT NULL
-      AND a.interactiondatetime >= '{start_date}'
-      AND a.interactiondatetime < '{end_date}'
-      AND SUBSTR(a.interactiondatetime, 1, 10) LIKE '____-__-__'
-
-    QUALIFY ROW_NUMBER() OVER
-    (
-        PARTITION BY LOWER(TRIM(a.connid))
-        ORDER BY a.interactiondatetime
-    ) = 1
-),
-
-call_recontact AS
-(
-    SELECT
-        c.*,
-
-        CASE
-            WHEN r.connid IS NOT NULL THEN 1
-            ELSE 0
-        END AS recontact_ind
-
-    FROM call_data c
-
-    LEFT JOIN vt_recontact r
-        ON c.connid = r.connid
-)
-
+check_query = f"""
 SELECT
-    week_start_call,
-    calldriver1,
-    virtual_queue,
-
-    COUNT(*) AS call_count,
-
-    SUM(recontact_ind) AS recontact_count,
-
-    CAST(SUM(recontact_ind) AS DECIMAL(18,6))
-        / NULLIFZERO(COUNT(*))
-        AS recontact_rate
-
-FROM call_recontact
-
-GROUP BY
-    week_start_call,
-    calldriver1,
-    virtual_queue
-
-ORDER BY
-    week_start_call,
-    calldriver1,
-    virtual_queue
+    COUNT(*) AS row_count,
+    MIN(week_start_call) AS min_week,
+    MAX(week_start_call) AS max_week
+FROM {target_table}
 """
 
+df_check = pd.read_sql(
+    check_query,
+    conn_tdap2
+)
 
-df_recontact_baseline = pd.read_sql(query, conn_eiwp)
+print(df_check)
