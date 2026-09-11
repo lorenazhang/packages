@@ -50,8 +50,6 @@ OVER (
     PARTITION BY LOWER(TRIM(connid))
     ORDER BY interactiondatetime
 ) = 1
-
-
 query = f"""
 WITH call_data AS
 (
@@ -62,11 +60,6 @@ WITH call_data AS
         a.aa_virtualqueue_bb_cct AS virtual_queue,
         a.interactiondatetime,
 
-        /* YYYYMM */
-        SUBSTR(a.interactiondatetime, 1, 4)
-        || SUBSTR(a.interactiondatetime, 6, 2) AS month_id,
-
-        /* Monday week start */
         CAST(SUBSTR(a.interactiondatetime, 1, 10)
              AS DATE FORMAT 'YYYY-MM-DD')
         -
@@ -84,13 +77,9 @@ WITH call_data AS
       AND a.calldriver1 NOT IN ('No Conversation', 'No Reason Disclosed')
       AND a.connid IS NOT NULL
       AND a.aa_virtualqueue_bb_cct IS NOT NULL
-
       AND a.interactiondatetime >= '{start_date}'
-      AND a.interactiondatetime <  '{end_date}'
-
-      /* exclude malformed datetime */
-      AND SUBSTR(a.interactiondatetime, 1, 10)
-          LIKE '____-__-__'
+      AND a.interactiondatetime < '{end_date}'
+      AND SUBSTR(a.interactiondatetime, 1, 10) LIKE '____-__-__'
 
     QUALIFY ROW_NUMBER() OVER
     (
@@ -113,49 +102,33 @@ call_recontact AS
 
     LEFT JOIN vt_recontact r
         ON c.connid = r.connid
-),
-
-vq_mapping AS
-(
-    SELECT DISTINCT
-        LOWER(TRIM(virtual_queue)) AS virtual_queue,
-        lob,
-        sublob
-    FROM {vq_mapping_table}
 )
 
 SELECT
-    c.week_start_call,
-    c.month_id,
-    c.calldriver1,
-    m.lob,
-    m.sublob,
+    week_start_call,
+    calldriver1,
+    virtual_queue,
 
     COUNT(*) AS call_count,
 
-    SUM(c.recontact_ind) AS recontact_count,
+    SUM(recontact_ind) AS recontact_count,
 
-    CAST(SUM(c.recontact_ind) AS DECIMAL(18,6))
+    CAST(SUM(recontact_ind) AS DECIMAL(18,6))
         / NULLIFZERO(COUNT(*))
         AS recontact_rate
 
-FROM call_recontact c
-
-LEFT JOIN vq_mapping m
-    ON LOWER(TRIM(c.virtual_queue)) = m.virtual_queue
+FROM call_recontact
 
 GROUP BY
-    c.week_start_call,
-    c.month_id,
-    c.calldriver1,
-    m.lob,
-    m.sublob
+    week_start_call,
+    calldriver1,
+    virtual_queue
 
 ORDER BY
-    c.week_start_call,
-    m.lob,
-    m.sublob,
-    c.calldriver1
+    week_start_call,
+    calldriver1,
+    virtual_queue
 """
+
 
 df_recontact_baseline = pd.read_sql(query, conn_eiwp)
