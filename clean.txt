@@ -1,53 +1,25 @@
-DROP TABLE call_driver_cases;
-
-CREATE VOLATILE TABLE call_driver_cases AS
-(
-    SELECT DISTINCT
-        ent.case_nr,
-        ent.wf_recd_dt,
-        ent.lob_about_product,
-        ent.product_type_desc,
-        ent.prim_complaint_category,
-        ent.prim_complaint_reason,
-        ent.recontact_ind,
-        note.summary_note,
-        note.resolution_note,
-        LOWER(TRIM(reg.conn_id)) AS conn_id
-
-    FROM EIW_I_CEDA_S1.COMPLAINTS_ENTERPRISE_DLY_CS ent
-
-    LEFT JOIN EIW_I_CEDA_S1.NOTES_ENTERPRISE_DLY_CS note
-        ON LOWER(TRIM(CAST(note.case_nr AS VARCHAR(100))))
-         = LOWER(TRIM(CAST(ent.case_nr AS VARCHAR(100))))
-
-    LEFT JOIN EIW_I_CEDA_S1.COMPLAINTS_ECMP_REGISTRY_DLY reg
-        ON LOWER(TRIM(CAST(ent.complaint_case_identifier AS VARCHAR(100))))
-         = LOWER(TRIM(CAST(reg.case_nr AS VARCHAR(100))))
-
-    WHERE ent.wf_recd_dt >= DATE '2026-03-16'
-      AND ent.wf_recd_dt < DATE '2026-09-01'
-      AND ent.prim_complaint_reason IN (
-          'Deposit or Payment Hold',
-          'Overdraft (OD) Fees'
-      )
-      AND ent.lob_about_product = 'Consumer Payments and Deposits'
-      AND ent.recontact_ind = 1
-      AND reg.conn_id IS NOT NULL
-)
-WITH DATA
-ON COMMIT PRESERVE ROWS;
-
-
 SELECT
     b.*,
+    
+    md.conn_id AS metadata_conn_id,
     md.interaction_id,
+    
+    CASE 
+        WHEN md.conn_id IS NOT NULL THEN 1 
+        ELSE 0 
+    END AS conn_match_ind,
+
+    CASE 
+        WHEN tr.interaction_id IS NOT NULL THEN 1 
+        ELSE 0 
+    END AS interaction_match_ind,
+
     tr.*
+
 FROM call_driver_cases b
 
-INNER JOIN SBX_CEDA_POC.wf_lob_byodb_metadata md
-    ON LOWER(TRIM(CAST(b.conn_id AS VARCHAR(100))))
-     = LOWER(TRIM(CAST(md.conn_id AS VARCHAR(100))))
+LEFT JOIN SBX_CEDA_POC.wf_lob_byodb_metadata md
+    ON LOWER(TRIM(b.conn_id)) = LOWER(TRIM(md.conn_id))
 
 LEFT JOIN SBX_CEDA_POC.wf_lob_byodb_full tr
-    ON LOWER(TRIM(CAST(md.interaction_id AS VARCHAR(100))))
-     = LOWER(TRIM(CAST(tr.interaction_id AS VARCHAR(100))));
+    ON LOWER(TRIM(md.interaction_id)) = LOWER(TRIM(tr.interaction_id));
