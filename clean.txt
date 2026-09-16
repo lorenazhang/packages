@@ -12,7 +12,8 @@ CREATE VOLATILE TABLE call_driver_cases AS
         ent.recontact_ind,
         note.summary_note,
         note.resolution_note,
-        reg.interaction_uuid
+        reg.conn_id,
+        cd.interactionid
 
     FROM EIW_I_CEDA_S1.COMPLAINTS_ENTERPRISE_DLY_CS ent
 
@@ -23,6 +24,9 @@ CREATE VOLATILE TABLE call_driver_cases AS
         ON TRIM(CAST(ent.complaint_case_identifier AS VARCHAR(100)))
          = TRIM(CAST(reg.case_nr AS VARCHAR(100)))
 
+    LEFT JOIN EIW_U_CEDA_VOCAL_V1.AMP_CALLDRIVERS2_0 cd
+        ON reg.conn_id = cd.connid
+
     WHERE ent.wf_recd_dt >= DATE '2026-03-16'
       AND ent.wf_recd_dt < DATE '2026-08-31'
       AND ent.prim_complaint_reason IN (
@@ -31,7 +35,7 @@ CREATE VOLATILE TABLE call_driver_cases AS
       )
       AND ent.lob_about_product = 'Consumer Payments and Deposits'
       AND ent.recontact_ind = 1
-      AND interaction_uuid IS NOT NULL
+      AND reg.conn_id IS NOT NULL
 
 )
 WITH DATA
@@ -42,4 +46,4 @@ SELECT *
 FROM call_driver_cases b
 
 LEFT JOIN SBX_CEDA_POC.wf_lob_byodb_full tr
-    ON tr.interaction_id = b.interaction_uuid;
+    ON tr.interaction_id = b.interactionid;
