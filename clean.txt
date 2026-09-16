@@ -1,1 +1,14 @@
+SELECT
+    COUNT(DISTINCT case_nr) AS case_cnt,
+    COUNT(DISTINCT conn_id) AS conn_cnt,
+    COUNT(*) AS row_cnt
+FROM call_driver_cases;
 
+
+
+SELECT
+    conn_id,
+    COUNT(DISTINCT case_nr) AS case_cnt
+FROM call_driver_cases
+GROUP BY conn_id
+ORDER BY case_cnt DESC;
