@@ -1,14 +1,21 @@
 SELECT
-    COUNT(DISTINCT case_nr) AS case_cnt,
-    COUNT(DISTINCT conn_id) AS conn_cnt,
-    COUNT(*) AS row_cnt
-FROM call_driver_cases;
+    COUNT(DISTINCT b.conn_id) AS complaint_conn_cnt,
+    COUNT(DISTINCT md.conn_id) AS matched_conn_cnt,
+    COUNT(DISTINCT md.interaction_id) AS matched_interaction_cnt
+FROM call_driver_cases b
+LEFT JOIN SBX_CEDA_POC.wf_lob_byodb_metadata md
+    ON TRIM(b.conn_id) = TRIM(md.conn_id);
 
 
 
 SELECT
-    conn_id,
-    COUNT(DISTINCT case_nr) AS case_cnt
-FROM call_driver_cases
-GROUP BY conn_id
-ORDER BY case_cnt DESC;
+    CASE
+        WHEN md.conn_id IS NOT NULL THEN 'MATCHED'
+        ELSE 'NOT MATCHED'
+    END AS match_status,
+    COUNT(DISTINCT b.conn_id) AS conn_cnt,
+    COUNT(DISTINCT b.case_nr) AS case_cnt
+FROM call_driver_cases b
+LEFT JOIN SBX_CEDA_POC.wf_lob_byodb_metadata md
+    ON TRIM(b.conn_id) = TRIM(md.conn_id)
+GROUP BY 1;
