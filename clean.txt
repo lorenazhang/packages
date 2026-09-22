@@ -1,71 +1,23 @@
 WITH call_raw AS
 (
     SELECT
-        /* Keep original value for validation */
-        TRIM(connid) AS original_connid,
-
-        /* =========================================================
-           Extract old-system CONNID
-
-           abc123          -> abc123
-           abc123_xyz789   -> abc123
-           _xyz789         -> NULL
-           ========================================================= */
-        CASE
-            WHEN POSITION('_' IN TRIM(connid)) > 1
-            THEN LOWER(
-                SUBSTR(
-                    TRIM(connid),
-                    1,
-                    POSITION('_' IN TRIM(connid)) - 1
-                )
-            )
-
-            WHEN POSITION('_' IN TRIM(connid)) = 0
-            THEN LOWER(TRIM(connid))
-
-            ELSE NULL
-        END AS call_connid,
-
-
-        /* =========================================================
-           Extract GLOBAL ID
-
-           abc123          -> NULL
-           abc123_xyz789   -> xyz789
-           _xyz789         -> xyz789
-           ========================================================= */
-        CASE
-            WHEN POSITION('_' IN TRIM(connid)) > 0
-            THEN LOWER(
-                SUBSTR(
-                    TRIM(connid),
-                    POSITION('_' IN TRIM(connid)) + 1
-                )
-            )
-
-            ELSE NULL
-        END AS call_globalid,
-
+        /* standardized IDs */
+        LOWER(TRIM(connid2)) AS connid2,
+        LOWER(TRIM(globalid)) AS globalid,
 
         interactionid,
         aa_virtualqueue_bb_cct,
         calldriver1,
         interactiondatetime,
 
-
         /* YYYYMM */
         SUBSTR(interactiondatetime, 1, 4)
-        || SUBSTR(interactiondatetime, 6, 2)
-            AS month_id,
-
+        || SUBSTR(interactiondatetime, 6, 2) AS month_id,
 
         /* YYYYMMDD */
         SUBSTR(interactiondatetime, 1, 4)
         || SUBSTR(interactiondatetime, 6, 2)
-        || SUBSTR(interactiondatetime, 9, 2)
-            AS day_id,
-
+        || SUBSTR(interactiondatetime, 9, 2) AS day_id,
 
         /* Monday week start */
         CAST(
@@ -83,163 +35,123 @@ WITH call_raw AS
             ) MOD 7
         ) AS week_start_call
 
-
     FROM EIW_U_CEDA_VOCAL_V1.AMP_CALLDRIVERS2_0
 
     WHERE model_lang = 'English'
-
       AND calldriver1 NOT IN (
             'No Conversation',
             'No Reason Disclosed'
       )
 
-      AND connid IS NOT NULL
+      /* Need at least one usable ID */
+      AND (
+            connid2 IS NOT NULL
+            OR globalid IS NOT NULL
+      )
 
       AND aa_virtualqueue_bb_cct IS NOT NULL
 
       AND interactiondatetime >= '2025-05-26'
+      AND interactiondatetime <  '2026-07-27'
 
-      AND interactiondatetime < '2026-07-27'
-
-      /* Remove malformed dates */
+      /* Exclude malformed dates */
       AND SUBSTR(interactiondatetime, 1, 10)
           LIKE '____-__-__'
 ),
 
 
-
-/* ================================================================
-   Deduplicate call records
-
+/* ============================================================
    One call may have multiple interactions.
-   Keep only the earliest interaction for each call.
-   ================================================================ */
+   Deduplicate so each call is counted once.
+   Prefer connid2 when available; otherwise use globalid.
+   ============================================================ */
 
 call_data AS
 (
-    SELECT
-        original_connid,
-        call_connid,
-        call_globalid,
-        interactionid,
-        aa_virtualqueue_bb_cct,
-        calldriver1,
-        interactiondatetime,
-        month_id,
-        day_id,
-        week_start_call
+    SELECT *
 
     FROM call_raw
 
     QUALIFY ROW_NUMBER() OVER
     (
-        PARTITION BY COALESCE(call_connid, call_globalid)
+        PARTITION BY
+            CASE
+                WHEN connid2 IS NOT NULL
+                    THEN 'C_' || connid2
+                ELSE 'G_' || globalid
+            END
+
         ORDER BY interactiondatetime
     ) = 1
 ),
 
 
-
-/* ================================================================
-   Complaint data
-   ================================================================ */
-
 comp_data AS
 (
     SELECT
-
-        LOWER(TRIM(conn_id)) AS comp_connid,
-
-        LOWER(TRIM(global_id)) AS comp_globalid,
+        LOWER(TRIM(conn_id)) AS conn_id,
+        LOWER(TRIM(global_id)) AS global_id,
 
         case_nr,
-
         complaint_id,
-
         complaint_type_desc,
 
         CAST(wf_recd_dt AS DATE) AS wf_recd_dt,
-
         CAST(created_dt AS DATE) AS created_dt
-
 
     FROM EIW_I_CEDA_S1.COMPLAINTS_ECMP_REGISTRY_DLY_CS
 
-    WHERE
-        (
+    WHERE (
             conn_id IS NOT NULL
             OR global_id IS NOT NULL
-        )
+          )
 
-        AND wf_recd_dt >= DATE '2025-05-26'
-
-        AND wf_recd_dt < DATE '2026-08-03'
+      AND wf_recd_dt >= DATE '2025-05-26'
+      AND wf_recd_dt <  DATE '2026-08-03'
 )
 
 
-
-/* ================================================================
-   Join calls to complaints and aggregate
-   ================================================================ */
-
 SELECT
-
     c.week_start_call,
-
     c.calldriver1,
-
     c.aa_virtualqueue_bb_cct,
 
-
-    /* ---------------- Call count ---------------- */
-
+    /* Counts */
     COUNT(*) AS call_count,
-
-
-    /* ---------------- Complaint counts ---------------- */
 
     SUM(
         CASE
             WHEN p.case_nr IS NOT NULL
-            THEN 1
-            ELSE 0
+            THEN 1 ELSE 0
         END
     ) AS complaint_count,
-
 
     SUM(
         CASE
             WHEN p.complaint_type_desc = 'Service Complaint'
-            THEN 1
-            ELSE 0
+            THEN 1 ELSE 0
         END
     ) AS service_complaint_count,
 
-
     SUM(
         CASE
-            WHEN p.complaint_type_desc IN
-            (
+            WHEN p.complaint_type_desc IN (
                 'LOB Escalated Complaint',
                 'EO Escalated Complaint'
             )
-            THEN 1
-            ELSE 0
+            THEN 1 ELSE 0
         END
     ) AS escalated_complaint_count,
 
 
-    /* ---------------- Conversion rates ---------------- */
-
+    /* Conversion rates */
     CAST(
         SUM(
             CASE
                 WHEN p.case_nr IS NOT NULL
-                THEN 1
-                ELSE 0
+                THEN 1 ELSE 0
             END
-        )
-        AS DECIMAL(18,6)
+        ) AS DECIMAL(18,6)
     )
     / NULLIFZERO(COUNT(*))
         AS complaint_conversion_rate,
@@ -249,11 +161,9 @@ SELECT
         SUM(
             CASE
                 WHEN p.complaint_type_desc = 'Service Complaint'
-                THEN 1
-                ELSE 0
+                THEN 1 ELSE 0
             END
-        )
-        AS DECIMAL(18,6)
+        ) AS DECIMAL(18,6)
     )
     / NULLIFZERO(COUNT(*))
         AS service_conversion_rate,
@@ -262,29 +172,24 @@ SELECT
     CAST(
         SUM(
             CASE
-                WHEN p.complaint_type_desc IN
-                (
+                WHEN p.complaint_type_desc IN (
                     'LOB Escalated Complaint',
                     'EO Escalated Complaint'
                 )
-                THEN 1
-                ELSE 0
+                THEN 1 ELSE 0
             END
-        )
-        AS DECIMAL(18,6)
+        ) AS DECIMAL(18,6)
     )
     / NULLIFZERO(COUNT(*))
         AS escalated_conversion_rate,
 
 
-    /* ---------------- Average complaint gap ---------------- */
-
+    /* Average complaint gap */
     AVG(
         CASE
             WHEN p.created_dt IS NOT NULL
              AND p.wf_recd_dt IS NOT NULL
             THEN p.created_dt - p.wf_recd_dt
-
             ELSE NULL
         END
     ) AS avg_gap_days
@@ -292,45 +197,32 @@ SELECT
 
 FROM call_data c
 
-
 LEFT JOIN comp_data p
-
     ON
     (
-        /* Old system or migration-period call:
-           match using old connid */
-        c.call_connid IS NOT NULL
-
-        AND c.call_connid = p.comp_connid
+        /* connid2 takes priority */
+        c.connid2 IS NOT NULL
+        AND c.connid2 = p.conn_id
     )
 
     OR
 
     (
-        /* New-system-only call:
-           _globalid -> complaint global_id */
-        c.call_connid IS NULL
-
-        AND c.call_globalid IS NOT NULL
-
-        AND c.call_globalid = p.comp_globalid
+        /* Only use globalid when connid2 is unavailable */
+        c.connid2 IS NULL
+        AND c.globalid IS NOT NULL
+        AND c.globalid = p.global_id
     )
 
 
 GROUP BY
-
     c.week_start_call,
-
     c.calldriver1,
-
     c.aa_virtualqueue_bb_cct
 
 
 ORDER BY
-
     c.calldriver1,
-
     c.aa_virtualqueue_bb_cct,
-
     c.week_start_call
 ;
