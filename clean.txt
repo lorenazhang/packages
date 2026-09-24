@@ -1,1 +1,58 @@
+SELECT
+    CAST(SUBSTR(interactiondatetime,1,10) AS DATE FORMAT 'YYYY-MM-DD')
+    -
+    (
+        (
+            CAST(SUBSTR(interactiondatetime,1,10) AS DATE FORMAT 'YYYY-MM-DD')
+            - DATE '1900-01-01'
+        ) MOD 7
+    ) AS week_start_call,
 
+    COUNT(*) AS total_rows,
+
+    SUM(
+        CASE WHEN connid IS NOT NULL
+        THEN 1 ELSE 0 END
+    ) AS connid_count,
+
+    SUM(
+        CASE WHEN connid2 IS NOT NULL
+        THEN 1 ELSE 0 END
+    ) AS connid2_count,
+
+    SUM(
+        CASE WHEN globalid IS NOT NULL
+        THEN 1 ELSE 0 END
+    ) AS globalid_count,
+
+    SUM(
+        CASE
+            WHEN connid2 IS NOT NULL
+              OR globalid IS NOT NULL
+            THEN 1 ELSE 0
+        END
+    ) AS new_id_available_count,
+
+    SUM(
+        CASE
+            WHEN connid IS NOT NULL
+             AND connid2 IS NULL
+             AND globalid IS NULL
+            THEN 1 ELSE 0
+        END
+    ) AS old_connid_only_count
+
+FROM EIW_U_CEDA_VOCAL_V1.AMP_CALLDRIVERS2_0
+
+WHERE model_lang = 'English'
+  AND calldriver1 NOT IN (
+      'No Conversation',
+      'No Reason Disclosed'
+  )
+  AND aa_virtualqueue_bb_cct IS NOT NULL
+  AND interactiondatetime >= '2025-05-26'
+  AND interactiondatetime < '2026-07-27'
+  AND SUBSTR(interactiondatetime,1,10) LIKE '____-__-__'
+
+GROUP BY 1
+ORDER BY 1;
