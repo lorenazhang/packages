@@ -1,58 +1,385 @@
-SELECT
-    CAST(SUBSTR(interactiondatetime,1,10) AS DATE FORMAT 'YYYY-MM-DD')
-    -
-    (
+WITH call_raw AS
+(
+    SELECT
+        LOWER(TRIM(connid))  AS connid,
+        LOWER(TRIM(connid2)) AS connid2,
+        LOWER(TRIM(globalid)) AS globalid,
+
+        interactionid,
+        aa_virtualqueue_bb_cct,
+        calldriver1,
+        interactiondatetime,
+
+        /* Monday week start */
+        CAST(
+            SUBSTR(interactiondatetime, 1, 10)
+            AS DATE FORMAT 'YYYY-MM-DD'
+        )
+        -
         (
-            CAST(SUBSTR(interactiondatetime,1,10) AS DATE FORMAT 'YYYY-MM-DD')
-            - DATE '1900-01-01'
-        ) MOD 7
-    ) AS week_start_call,
+            (
+                CAST(
+                    SUBSTR(interactiondatetime, 1, 10)
+                    AS DATE FORMAT 'YYYY-MM-DD'
+                )
+                - DATE '1900-01-01'
+            ) MOD 7
+        ) AS week_start_call
 
-    COUNT(*) AS total_rows,
+    FROM EIW_U_CEDA_VOCAL_V1.AMP_CALLDRIVERS2_0
 
-    SUM(
-        CASE WHEN connid IS NOT NULL
-        THEN 1 ELSE 0 END
-    ) AS connid_count,
+    WHERE model_lang = 'English'
 
-    SUM(
-        CASE WHEN connid2 IS NOT NULL
-        THEN 1 ELSE 0 END
-    ) AS connid2_count,
+      AND calldriver1 NOT IN
+          ('No Conversation', 'No Reason Disclosed')
 
-    SUM(
-        CASE WHEN globalid IS NOT NULL
-        THEN 1 ELSE 0 END
-    ) AS globalid_count,
+      AND aa_virtualqueue_bb_cct IS NOT NULL
 
+      /* At least one usable ID */
+      AND (
+            connid2 IS NOT NULL
+         OR globalid IS NOT NULL
+         OR connid IS NOT NULL
+      )
+
+      AND interactiondatetime >= '2025-05-26'
+      AND interactiondatetime <  '2026-07-27'
+
+      AND SUBSTR(interactiondatetime, 1, 10)
+          LIKE '____-__-__'
+),
+
+
+/* ============================================================
+   Branch 1
+   CONNID2 available
+   -> use CONNID2
+   ============================================================ */
+
+call_connid2 AS
+(
+    SELECT *
+    FROM call_raw
+
+    WHERE connid2 IS NOT NULL
+
+    QUALIFY ROW_NUMBER() OVER
+    (
+        PARTITION BY connid2
+        ORDER BY interactiondatetime
+    ) = 1
+),
+
+
+/* ============================================================
+   Branch 2
+   CONNID2 unavailable but GLOBALID available
+   -> use GLOBALID
+   ============================================================ */
+
+call_globalid AS
+(
+    SELECT *
+    FROM call_raw
+
+    WHERE connid2 IS NULL
+      AND globalid IS NOT NULL
+
+    QUALIFY ROW_NUMBER() OVER
+    (
+        PARTITION BY globalid
+        ORDER BY interactiondatetime
+    ) = 1
+),
+
+
+/* ============================================================
+   Branch 3
+   Neither CONNID2 nor GLOBALID available
+   -> fallback to original CONNID
+   ============================================================ */
+
+call_old_connid AS
+(
+    SELECT *
+    FROM call_raw
+
+    WHERE connid2 IS NULL
+      AND globalid IS NULL
+      AND connid IS NOT NULL
+
+    QUALIFY ROW_NUMBER() OVER
+    (
+        PARTITION BY connid
+        ORDER BY interactiondatetime
+    ) = 1
+),
+
+
+/* ============================================================
+   Complaint data for CONNID joins
+   Used by Branch 1 and Branch 3
+   ============================================================ */
+
+comp_connid AS
+(
+    SELECT
+        LOWER(TRIM(conn_id)) AS conn_id,
+
+        case_nr,
+        complaint_id,
+        complaint_type_desc,
+
+        CAST(wf_recd_dt AS DATE) AS wf_recd_dt,
+        CAST(created_dt AS DATE) AS created_dt
+
+    FROM EIW_I_CEDA_S1.COMPLAINTS_ECMP_REGISTRY_DLY_CS
+
+    WHERE conn_id IS NOT NULL
+
+      AND wf_recd_dt >= DATE '2025-05-26'
+      AND wf_recd_dt <  DATE '2026-08-03'
+),
+
+
+/* ============================================================
+   Complaint data for GLOBALID join
+   Used by Branch 2
+   ============================================================ */
+
+comp_globalid AS
+(
+    SELECT
+        LOWER(TRIM(global_id)) AS global_id,
+
+        case_nr,
+        complaint_id,
+        complaint_type_desc,
+
+        CAST(wf_recd_dt AS DATE) AS wf_recd_dt,
+        CAST(created_dt AS DATE) AS created_dt
+
+    FROM EIW_I_CEDA_S1.COMPLAINTS_ECMP_REGISTRY_DLY_CS
+
+    WHERE global_id IS NOT NULL
+
+      AND wf_recd_dt >= DATE '2025-05-26'
+      AND wf_recd_dt <  DATE '2026-08-03'
+),
+
+
+/* ============================================================
+   JOIN 1:
+   CONNID2 -> complaint CONN_ID
+   ============================================================ */
+
+joined_connid2 AS
+(
+    SELECT
+        c.week_start_call,
+        c.calldriver1,
+        c.aa_virtualqueue_bb_cct,
+
+        c.connid2 AS call_id,
+
+        p.case_nr,
+        p.complaint_type_desc,
+        p.wf_recd_dt,
+        p.created_dt
+
+    FROM call_connid2 c
+
+    LEFT JOIN comp_connid p
+        ON c.connid2 = p.conn_id
+),
+
+
+/* ============================================================
+   JOIN 2:
+   GLOBALID -> complaint GLOBAL_ID
+   ============================================================ */
+
+joined_globalid AS
+(
+    SELECT
+        c.week_start_call,
+        c.calldriver1,
+        c.aa_virtualqueue_bb_cct,
+
+        c.globalid AS call_id,
+
+        p.case_nr,
+        p.complaint_type_desc,
+        p.wf_recd_dt,
+        p.created_dt
+
+    FROM call_globalid c
+
+    LEFT JOIN comp_globalid p
+        ON c.globalid = p.global_id
+),
+
+
+/* ============================================================
+   JOIN 3:
+   Historical CONNID -> complaint CONN_ID
+   ============================================================ */
+
+joined_old_connid AS
+(
+    SELECT
+        c.week_start_call,
+        c.calldriver1,
+        c.aa_virtualqueue_bb_cct,
+
+        c.connid AS call_id,
+
+        p.case_nr,
+        p.complaint_type_desc,
+        p.wf_recd_dt,
+        p.created_dt
+
+    FROM call_old_connid c
+
+    LEFT JOIN comp_connid p
+        ON c.connid = p.conn_id
+),
+
+
+/* ============================================================
+   Combine all 3 mutually-exclusive populations
+   ============================================================ */
+
+joined_data AS
+(
+    SELECT * FROM joined_connid2
+
+    UNION ALL
+
+    SELECT * FROM joined_globalid
+
+    UNION ALL
+
+    SELECT * FROM joined_old_connid
+)
+
+
+/* ============================================================
+   Final weekly aggregation
+   ============================================================ */
+
+SELECT
+    week_start_call,
+    calldriver1,
+    aa_virtualqueue_bb_cct,
+
+    /* Calls */
+    COUNT(*) AS call_count,
+
+
+    /* All complaints */
     SUM(
         CASE
-            WHEN connid2 IS NOT NULL
-              OR globalid IS NOT NULL
-            THEN 1 ELSE 0
+            WHEN case_nr IS NOT NULL
+            THEN 1
+            ELSE 0
         END
-    ) AS new_id_available_count,
+    ) AS complaint_count,
 
+
+    /* Service complaints */
     SUM(
         CASE
-            WHEN connid IS NOT NULL
-             AND connid2 IS NULL
-             AND globalid IS NULL
-            THEN 1 ELSE 0
+            WHEN complaint_type_desc = 'Service Complaint'
+            THEN 1
+            ELSE 0
         END
-    ) AS old_connid_only_count
+    ) AS service_complaint_count,
 
-FROM EIW_U_CEDA_VOCAL_V1.AMP_CALLDRIVERS2_0
 
-WHERE model_lang = 'English'
-  AND calldriver1 NOT IN (
-      'No Conversation',
-      'No Reason Disclosed'
-  )
-  AND aa_virtualqueue_bb_cct IS NOT NULL
-  AND interactiondatetime >= '2025-05-26'
-  AND interactiondatetime < '2026-07-27'
-  AND SUBSTR(interactiondatetime,1,10) LIKE '____-__-__'
+    /* Escalated complaints */
+    SUM(
+        CASE
+            WHEN complaint_type_desc IN
+            (
+                'LOB Escalated Complaint',
+                'EO Escalated Complaint'
+            )
+            THEN 1
+            ELSE 0
+        END
+    ) AS escalated_complaint_count,
 
-GROUP BY 1
-ORDER BY 1;
+
+    /* Overall complaint conversion rate */
+    CAST(
+        SUM(
+            CASE
+                WHEN case_nr IS NOT NULL
+                THEN 1
+                ELSE 0
+            END
+        )
+        AS DECIMAL(18,6)
+    )
+    / NULLIFZERO(COUNT(*))
+        AS complaint_conversion_rate,
+
+
+    /* Service complaint conversion rate */
+    CAST(
+        SUM(
+            CASE
+                WHEN complaint_type_desc = 'Service Complaint'
+                THEN 1
+                ELSE 0
+            END
+        )
+        AS DECIMAL(18,6)
+    )
+    / NULLIFZERO(COUNT(*))
+        AS service_conversion_rate,
+
+
+    /* Escalated complaint conversion rate */
+    CAST(
+        SUM(
+            CASE
+                WHEN complaint_type_desc IN
+                (
+                    'LOB Escalated Complaint',
+                    'EO Escalated Complaint'
+                )
+                THEN 1
+                ELSE 0
+            END
+        )
+        AS DECIMAL(18,6)
+    )
+    / NULLIFZERO(COUNT(*))
+        AS escalated_conversion_rate,
+
+
+    /* Average complaint timing gap */
+    AVG(
+        CASE
+            WHEN created_dt IS NOT NULL
+             AND wf_recd_dt IS NOT NULL
+            THEN created_dt - wf_recd_dt
+            ELSE NULL
+        END
+    ) AS avg_gap_days
+
+
+FROM joined_data
+
+GROUP BY
+    week_start_call,
+    calldriver1,
+    aa_virtualqueue_bb_cct
+
+ORDER BY
+    calldriver1,
+    aa_virtualqueue_bb_cct,
+    week_start_call
+;
