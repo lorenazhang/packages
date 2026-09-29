@@ -1,1 +1,14 @@
 
+RCA 3.0 (Emerging Observation 2.0) 2026
+Developed a multi-signal detection framework to proactively identify emerging themes and trends by integrating customer complaints, calls, social media, loudspeaker, and other data sources. Built historical baselines and signal detection methodologies to surface early indicators of customer experience issues before they develop into broader trends.
+QA Validation (Writing Buddy) 2025-2026
+Developed a validation solution to compare ECMP case data against system-of-record (SOR) values, enabling case workers and QA teams to efficiently identify data quality issues and potential discrepancies.
+Loudspeaker Analysis 2025
+Leveraged LLMs to analyze employee complaints and feedback from Loudspeaker, identifying emerging themes, recurring concerns, and areas for further investigation.
+Policy Agent 2025
+Developed an AI-powered Policy Agent to answer bank policy-related questions. Evaluated various embedding models, chunking strategies, vector databases, and LLM prompt engineering techniques to optimize information retrieval and response quality, with the solution planned for deployment through Tachyon and Microsoft Teams.
+CSI Divestiture 2024
+Developed a hybrid detection solution combining rule-based logic, n-gram, and H2O models to identify potential Confidential Supervisory Information (CSI) in employee files and emails as part of a divestiture. The solution significantly reduced false positives and manual review effort, supporting CSI remediation prior to impacted employees transitioning to the acquiring company.
+
+
+
